@@ -381,8 +381,6 @@
     submitBtn.classList.add('loading');
     submitBtn.disabled = true;
     var visitorData = { action: 'checkin', fullName: fullName.value.trim(), contactNumber: contactNumber.value.trim(), contactPerson: contactPerson.value, purpose: purpose.value };
-    // Show confirmation immediately (optimistic) so the user always gets feedback
-showToast(t('visitorSuccess'), 'success');
       // Show success modal immediately
       showVisitorSuccessModal(visitorData.fullName);
       form.reset();
@@ -537,8 +535,6 @@ showToast(t('visitorSuccess'), 'success');
     employeeSubmitBtn.classList.add('loading');
     employeeSubmitBtn.disabled = true;
     var data = { action: 'empCheckin', fullName: employeeName.value, department: employeeDept.value };
-    // Show confirmation immediately (optimistic) so the user always gets feedback
-showToast(t('employeeSuccess').replace('{name}', data.fullName), 'success');
       // Show success modal immediately
       showEmployeeSuccessModal(data.fullName);
       employeeForm.reset();
