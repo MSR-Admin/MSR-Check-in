@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# IDE / editor
+.kilo/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local

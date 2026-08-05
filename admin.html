@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Admin Dashboard - Visitors Login System">
+  <title>Admin Dashboard · MSR Check-in</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-page">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- ─── Auth Overlay ─────────────────────── -->
+  <div id="authOverlay" class="auth-overlay" style="display: none;">
+    <div class="auth-card">
+      <div class="lock-icon" aria-hidden="true">🔐</div>
+      <h2 data-i18n="adminAccess">Admin Access</h2>
+      <p data-i18n="adminAccessSub">Enter your password to access the dashboard</p>
+      <input
+        type="password"
+        id="pinInput"
+        class="form-input"
+        data-i18n-placeholder="passwordPlaceholder"
+        placeholder="Password"
+        autofocus
+        aria-describedby="authError"
+      >
+      <div class="auth-error" id="authError" role="alert" data-i18n="authError">
+        ❌ Incorrect password. Try again.
+      </div>
+      <button id="authBtn" class="btn-submit" style="margin-top: 16px;">
+        <span class="btn-text" data-i18n="unlockDashboard">Unlock Dashboard</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── Navigation Bar ──────────────────── -->
+  <nav class="admin-nav" aria-label="Admin Navigation">
+    <div class="admin-nav-inner">
+      <a href="index.html" class="admin-nav-brand">
+        <span class="brand-icon" aria-hidden="true">
+          <img src="images/MSR_logo.png" alt="MSR Logo">
+        </span>
+        <span data-i18n="adminPanel">Admin Panel</span>
+      </a>
+      <div class="admin-nav-actions">
+        <div class="admin-lang-selector" id="adminLangSelector">
+          <span id="adminLangLabel">🌐 English</span>
+          <span class="chevron">▼</span>
+        </div>
+        <button id="backBtn" class="btn-back">
+          ← <span data-i18n="back">Back</span>
+        </button>
+        <button id="logoutBtn" class="btn-logout">
+          🔒 <span data-i18n="logout">Logout</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── Main Content ────────────────────── -->
+  <main id="adminMain" class="admin-main" style="display: none;">
+
+    <!-- Stats Cards -->
+    <section class="stats-grid" aria-label="Dashboard Statistics">
+      <div class="stat-card">
+        <span class="stat-icon" aria-hidden="true">📅</span>
+        <div class="stat-card-label" data-i18n="totalToday">Total Today</div>
+        <div class="stat-card-value" id="totalToday">0</div>
+        <div class="stat-card-sub" data-i18n="visitorsCheckedIn">visitors checked in today</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon" aria-hidden="true">📍</span>
+        <div class="stat-card-label" data-i18n="currentlyOnSite">Currently On-Site</div>
+        <div class="stat-card-value" id="onSite">0</div>
+        <div class="stat-card-sub" data-i18n="visitorsInBuilding">visitors in the building</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon" aria-hidden="true">⏱️</span>
+        <div class="stat-card-label" data-i18n="recentEntry">Recent Entry</div>
+        <div class="stat-card-value" id="recentEntry" style="font-size: 20px; letter-spacing: 0;">—</div>
+        <div class="stat-card-sub" data-i18n="mostRecentCheckin">most recent check-in</div>
+      </div>
+    </section>
+
+    <!-- View Toggle -->
+    <div class="view-toggle" role="tablist">
+      <button class="filter-tab active" data-view="visitors" role="tab" aria-selected="true" data-i18n="visitors">Visitors</button>
+      <button class="filter-tab" data-view="employees" role="tab" aria-selected="false" data-i18n="employees">Employees</button>
+    </div>
+
+    <!-- Search & Filters (only for visitors view) -->
+    <div id="searchFilterSection" class="search-wrapper-section">
+      <div class="search-wrapper">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          data-i18n-placeholder="searchPlaceholder"
+          placeholder="Search by name, contact, person, or purpose..."
+          aria-label="Search visitors"
+        >
+      </div>
+
+      <div class="filter-tabs" role="tablist" aria-label="Filter visitors">
+        <button class="filter-tab active" data-filter="all" role="tab" aria-selected="true" data-i18n="all">All</button>
+        <button class="filter-tab" data-filter="checked-in" role="tab" aria-selected="false" data-i18n="onSite">On-Site</button>
+        <button class="filter-tab" data-filter="checked-out" role="tab" aria-selected="false" data-i18n="checkedOut">Checked Out</button>
+      </div>
+    </div>
+
+    <!-- Visitors Section -->
+    <section id="visitorsSection">
+      <div class="section-title" data-i18n="visitorLog">
+        📋 Visitor Log
+      </div>
+
+      <div class="table-card">
+        <div class="table-scroll">
+          <table class="visitors-table" id="visitorsTable">
+            <thead>
+              <tr>
+                <th data-i18n="thID">ID</th>
+                <th data-i18n="thName">Name</th>
+                <th data-i18n="thContact">Contact</th>
+                <th data-i18n="thContactPerson">Contact Person</th>
+                <th data-i18n="thPurpose">Purpose</th>
+                <th data-i18n="thStatus">Status</th>
+                <th data-i18n="thDate">Date</th>
+                <th data-i18n="thTime">Time</th>
+                <th data-i18n="thAction">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rows rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <div class="empty-state-icon" aria-hidden="true">📭</div>
+          <h3 data-i18n="noVisitorsFound">No visitors found</h3>
+          <p data-i18n="visitorsWillAppear">Visitors who check in will appear here.</p>
+        </div>
+      </div>
+
+      <!-- ─── Manual Override Section ────────── -->
+      <section class="override-section">
+        <div class="override-header" role="button" tabindex="0" aria-expanded="false">
+          <h3>
+            <span aria-hidden="true">✏️</span>
+            <span data-i18n="manualOverride">Manual Override — Add Visitor</span>
+          </h3>
+          <span class="override-toggle" aria-hidden="true">▼</span>
+        </div>
+        <div class="override-body">
+          <form id="overrideForm" class="override-form">
+            <div class="form-group form-group--full">
+              <label class="form-label" for="overrideName" data-i18n="fullName">Full Name</label>
+              <input
+                type="text"
+                id="overrideName"
+                class="form-input"
+                data-i18n-placeholder="enterVisitorName"
+                placeholder="Enter visitor name"
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="overrideContact" data-i18n="contactNumber">Contact Number</label>
+              <input
+                type="tel"
+                id="overrideContact"
+                class="form-input"
+                placeholder="09XX XXX XXXX"
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="overridePerson" data-i18n="contactPerson">Contact Person</label>
+              <div class="select-wrapper">
+                <select id="overridePerson" class="form-select" required>
+                  <option value="" data-i18n="selectPersonByDept">Select person by department...</option>
+                  <optgroup label="GCC Team">
+                    <option value="Ron Adan">Ron Adan</option>
+                    <option value="Majeed Ali Alshawi">Majeed Ali Alshawi</option>
+                    <option value="Sofia Apostol">Sofia Apostol</option>
+                    <option value="Jane Bergado">Jane Bergado</option>
+                    <option value="Mia Bullungan">Mia Bullungan</option>
+                    <option value="Tin Bustarga">Tin Bustarga</option>
+                    <option value="Pauline Cruz">Pauline Cruz</option>
+                    <option value="Aladin Dimakaling">Aladin Dimakaling</option>
+                    <option value="Marlou Dimanarig">Marlou Dimanarig</option>
+                    <option value="Paul Egualan">Paul Egualan</option>
+                    <option value="Patricia Ensomo">Patricia Ensomo</option>
+                    <option value="Theo Floresca">Theo Floresca</option>
+                    <option value="Rodel Llacuna, Jr.">Rodel Llacuna, Jr.</option>
+                    <option value="Catherine Lopez">Catherine Lopez</option>
+                  </optgroup>
+                  <optgroup label="Western Team">
+                    <option value="Jay Aggarao">Jay Aggarao</option>
+                    <option value="Eshaq Al-Mstaka">Eshaq Al-Mstaka</option>
+                    <option value="Racquel Bosano">Racquel Bosano</option>
+                    <option value="Christian Cabanes">Christian Cabanes</option>
+                    <option value="Monica Cabrera">Monica Cabrera</option>
+                    <option value="Ashley Calvo">Ashley Calvo</option>
+                    <option value="Ailyn Dela Cruz">Ailyn Dela Cruz</option>
+                    <option value="CJ Diaz">CJ Diaz</option>
+                    <option value="Narciso Donayre">Narciso Donayre</option>
+                    <option value="Angelica Lacuna">Angelica Lacuna</option>
+                    <option value="Ruth Martos">Ruth Martos</option>
+                    <option value="Aleeyah Padilla">Aleeyah Padilla</option>
+                    <option value="Jerish Rodriguez-Mallare">Jerish Rodriguez-Mallare</option>
+                    <option value="Anna Victoriano">Anna Victoriano</option>
+                    <option value="Ernie Vida">Ernie Vida</option>
+                  </optgroup>
+                  <optgroup label="Documentation and Deployment">
+                    <option value="Jenny Ayos">Jenny Ayos</option>
+                    <option value="Madz Batasin">Madz Batasin</option>
+                    <option value="Neilster Carpio">Neilster Carpio</option>
+                    <option value="Patrick De Leon">Patrick De Leon</option>
+                    <option value="Ren Esguerra, Jr.">Ren Esguerra, Jr.</option>
+                    <option value="Ritche Gerona">Ritche Gerona</option>
+                    <option value="Ivy Peñascosas">Ivy Peñascosas</option>
+                    <option value="Zsa Zsa Villadorez">Zsa Zsa Villadorez</option>
+                  </optgroup>
+                  <optgroup label="Accounting">
+                    <option value="Wilma Bartolome">Wilma Bartolome</option>
+                    <option value="Angeline Casinsin">Angeline Casinsin</option>
+                    <option value="Ella Celestino">Ella Celestino</option>
+                  </optgroup>
+                  <optgroup label="HR">
+                    <option value="Russell Caballero">Russell Caballero</option>
+                    <option value="Anna Pili">Anna Pili</option>
+                  </optgroup>
+                  <optgroup label="Digital Marketing">
+                    <option value="Angelica Necor">Angelica Necor</option>
+                  </optgroup>
+                  <optgroup label="Business Development">
+                    <option value="Cecil Dela Rosa">Cecil Dela Rosa</option>
+                  </optgroup>
+                  <optgroup label="Office of the President">
+                    <option value="Charidy Ma-ao">Charidy Ma-ao</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="overridePurpose" data-i18n="purpose">Purpose</label>
+              <div class="select-wrapper">
+                <select id="overridePurpose" class="form-select" required>
+                  <option value="" data-i18n="selectPurpose">Select purpose...</option>
+                  <option value="Meeting" data-i18n="purposeMeeting">Meeting</option>
+                  <option value="Delivery" data-i18n="purposeDelivery">Delivery</option>
+                  <option value="Interview" data-i18n="purposeInterview">Interview</option>
+                  <option value="Maintenance" data-i18n="purposeMaintenance">Maintenance</option>
+                  <option value="Personal Visit" data-i18n="purposePersonalVisit">Personal Visit</option>
+                  <option value="Job Application" data-i18n="purposeJobApp">Job Application</option>
+                  <option value="Client Visit" data-i18n="purposeClientVisit">Client Visit</option>
+                  <option value="Final Briefing" data-i18n="purposeBriefing">Final Briefing</option>
+                  <option value="Submission of Documents" data-i18n="purposeSubmission">Submission of Documents</option>
+                  <option value="Other" data-i18n="purposeOther">Other</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit" style="margin-top: 8px;">
+              <span class="btn-text" data-i18n="addVisitorManually">➕ Add Visitor Manually</span>
+            </button>
+          </form>
+        </div>
+      </section>
+    </section>
+
+    <!-- Employees Section -->
+    <section id="employeesSection" style="display: none;">
+      <div class="section-title" data-i18n="employeeLog">
+        👥 Employee Log
+      </div>
+
+      <div class="table-card">
+        <div class="table-scroll">
+          <table class="visitors-table" id="employeesTable">
+            <thead>
+              <tr>
+                <th data-i18n="thID">ID</th>
+                <th data-i18n="thEmployeeID">Employee ID</th>
+                <th data-i18n="thName">Name</th>
+                <th data-i18n="thDepartment">Department</th>
+                <th data-i18n="thType">Type</th>
+                <th data-i18n="thStatus">Status</th>
+                <th data-i18n="thDate">Date</th>
+                <th data-i18n="thTime">Time</th>
+                <th data-i18n="thAction">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rows rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyStateEmployees" class="empty-state" style="display: none;">
+          <div class="empty-state-icon" aria-hidden="true">📭</div>
+          <h3 data-i18n="noEmployeesFound">No employees found</h3>
+          <p data-i18n="employeesWillAppear">Employees who check in will appear here.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── Admin Footer ─────────────────────── -->
+  <footer class="admin-footer">
+    <div class="security-badge">
+      <span data-i18n="infoProtected">🔒 Your information is protected</span>
+    </div>
+      <div class="version-info" data-i18n="versionInfo">
+        Version 2.0 | © 2026 Medical Staffing Resources
+      </div>
+      <div class="dev-credit" data-i18n="devCredit">Developed and Maintained by: Ritche Gerona</div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/admin.js"></script>
+
+</body>
+</html>
