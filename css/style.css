@@ -514,7 +514,7 @@ body {
 
 /* ─── Modal Styles ──────────────────────── */
 .hidden { display: none !important; }
-.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+ .modal { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(12px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 /* Remove overlay background for visitor & employee success modals */
 #visitorSuccessModal.modal,
 #employeeSuccessModal.modal {
