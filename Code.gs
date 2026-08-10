@@ -61,7 +61,7 @@ function getAllRows() {
       status: data[i][6],
       date: dateStr,
       time: timeStr,
-      checkoutTime: data[i][9] || null,
+      checkoutTime: data[i][8] || null,
       timestamp: (dateVal && timeVal) ? new Date(dateStr + ' ' + timeStr) : null
     });
   }

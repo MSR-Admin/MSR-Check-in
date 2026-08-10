@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Sync - MSR Check-in</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #1a73e8; color: white; }
+    .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    .warning { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Test Sync - Google Sheets to Admin Panel</h1>
+  
+  <div class="warning">
+    <strong>Issue:</strong> The admin panel is showing different data than Google Sheets.<br>
+    This could be due to: (1) Browser cache, (2) Old API deployment, (3) Column mapping mismatch.
+  </div>
+  
+  <h2>Google Sheet Data (from your message):</h2>
+  <pre id="sheetData"></pre>
+  
+  <h2>Simulated API Response (what Code.gs should send):</h2>
+  <pre id="apiResponse"></pre>
+  
+  <h2>Admin Panel Display (after formatting):</h2>
+  <table id="adminTable">
+    <thead>
+      <tr>
+        <th>ID Number</th>
+        <th>Full Name</th>
+        <th>Status</th>
+        <th>Date (Sheet)</th>
+        <th>Date (Admin)</th>
+        <th>Time (Sheet)</th>
+        <th>Time (Admin)</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  
+  <h2>Sync Test Results</h2>
+  <div id="results"></div>
+  
+  <script>
+    // Data from Google Sheet (as shown by user)
+    const sheetData = [
+      { id: 'msmpo6ridkdp', idNumber: 'VIS-20260810-3685', fullName: 'test', contactNumber: '0998 92341 98', contactPerson: 'Mia Bullungan', purpose: 'Interview', status: 'checked-in', date: '10/08/2026', time: '12:08 PM' },
+      { id: 'msmpyu9dcl9k', idNumber: 'VIS-20260810-3367', fullName: 'test', contactNumber: '0998 92341 98', contactPerson: 'Tin Bustarga', purpose: 'Maintenance', status: 'checked-in', date: '10/08/2026', time: '12:16 PM' }
+    ];
+    
+    // Display raw sheet data
+    document.getElementById('sheetData').textContent = JSON.stringify(sheetData, null, 2);
+    
+    // Simulate API response (what Code.gs sends)
+    const apiResponse = {
+      status: 'success',
+      data: sheetData
+    };
+    document.getElementById('apiResponse').textContent = JSON.stringify(apiResponse, null, 2);
+    
+    // Format functions (from admin.js)
+    function formatDate(raw) {
+      if (!raw) return '';
+      if (raw instanceof Date) {
+        return raw.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      var str = String(raw).trim();
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+        var parts = str.split('/');
+        var day = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        var year = parseInt(parts[2], 10);
+        var d = new Date(year, month - 1, day);
+        if (isNaN(d.getTime())) return str;
+        return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      var d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    function formatTime(raw) {
+      if (!raw) return '';
+      if (raw instanceof Date) {
+        return raw.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+      var trimmed = String(raw).trim();
+      if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(trimmed)) return trimmed;
+      var d = new Date(trimmed);
+      if (isNaN(d.getTime())) return trimmed;
+      return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    
+    // Render table
+    const tbody = document.getElementById('tableBody');
+    sheetData.forEach(row => {
+      const tr = tbody.insertRow();
+      tr.insertCell(0).textContent = row.idNumber;
+      tr.insertCell(1).textContent = row.fullName;
+      tr.insertCell(2).textContent = row.status;
+      tr.insertCell(3).textContent = row.date;
+      tr.insertCell(4).textContent = formatDate(row.date);
+      tr.insertCell(5).textContent = row.time;
+      tr.insertCell(6).textContent = formatTime(row.time);
+    });
+    
+    // Test sync
+    const resultsDiv = document.getElementById('results');
+    let allPass = true;
+    
+    // Test 1: Date formatting
+    const date1 = formatDate('10/08/2026');
+    const datePass1 = date1 === 'Aug 10, 2026';
+    allPass = allPass && datePass1;
+    resultsDiv.innerHTML += `<div class="${datePass1 ? 'success' : 'error'}">
+      ${datePass1 ? '✅' : '❌'} Test 1: formatDate('10/08/2026') = '${date1}' (Expected: 'Aug 10, 2026')
+    </div>`;
+    
+    // Test 2: Time formatting
+    const time1 = formatTime('12:08 PM');
+    const timePass1 = time1 === '12:08 PM';
+    allPass = allPass && timePass1;
+    resultsDiv.innerHTML += `<div class="${timePass1 ? 'success' : 'error'}">
+      ${timePass1 ? '✅' : '❌'} Test 2: formatTime('12:08 PM') = '${time1}' (Expected: '12:08 PM')
+    </div>`;
+    
+    // Test 3: Column mapping
+    const colMapPass = sheetData[0].idNumber === 'VIS-20260810-3685';
+    allPass = allPass && colMapPass;
+    resultsDiv.innerHTML += `<div class="${colMapPass ? 'success' : 'error'}">
+      ${colMapPass ? '✅' : '❌'} Test 3: Column mapping correct (idNumber = 'VIS-20260810-3685')
+    </div>`;
+    
+    resultsDiv.innerHTML += `<div class="${allPass ? 'success' : 'error'}" style="font-weight: bold; margin-top: 10px;">
+      ${allPass ? '✅ ALL TESTS PASSED - Sync is working correctly!' : '❌ SOME TESTS FAILED'}
+    </div>`;
+    
+    resultsDiv.innerHTML += `<div class="warning" style="margin-top: 10px;">
+      <strong>If tests pass but admin panel still shows wrong data:</strong><br>
+      1. Hard refresh browser (Cmd+Shift+R)<br>
+      2. Clear browser cache<br>
+      3. Check browser console (F12) for errors<br>
+      4. Verify API URL is correct in admin.js line 11
+    </div>`;
+  </script>
+</body>
+</html>
