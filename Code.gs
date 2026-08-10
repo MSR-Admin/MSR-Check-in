@@ -98,8 +98,6 @@ function getAllEmployeeRows() {
   }
   return rows;
 }
-  return rows;
-}
 
 function findRowById(sheet, id) {
   const data = sheet.getDataRange().getValues();
