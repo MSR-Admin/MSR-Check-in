@@ -7,8 +7,8 @@
 const SHEET_NAME = 'Visitors';
 const EMPLOYEE_SHEET_NAME = 'Employees';
 const ADMIN_PIN = '1234';
-const HEADERS = ['ID', 'ID Number', 'Full Name', 'Contact Number', 'Contact Person', 'Purpose', 'Status', 'Date', 'Time', 'Checkout Time'];
-const EMPLOYEE_HEADERS = ['ID', 'Employee ID', 'Full Name', 'Department', 'Type', 'Status', 'Date', 'Time'];
+const HEADERS = ['ID Number', 'Full Name', 'Contact Number', 'Contact Person', 'Purpose', 'Status', 'Date', 'Time', 'Checkout Time'];
+const EMPLOYEE_HEADERS = ['Employee ID', 'Full Name', 'Department', 'Type', 'Status', 'Date', 'Time'];
 
 // ─── SHEET HELPERS ────────────────────────────
 function getSheet() {
@@ -42,7 +42,7 @@ function getAllRows() {
   const rows = [];
   for (let i = 1; i < data.length; i++) {
     rows.push({
-      id: data[i][0],
+      id: data[i][0], // placeholder generic ID column (unused)
       idNumber: data[i][1],
       fullName: data[i][2],
       contactNumber: data[i][3],
@@ -51,7 +51,8 @@ function getAllRows() {
       status: data[i][6],
       date: data[i][7] || '',
       time: data[i][8] || '',
-      checkoutTime: data[i][9] || null
+      checkoutTime: data[i][9] || null,
+      timestamp: (data[i][7] && data[i][8]) ? new Date(`${data[i][7]} ${data[i][8]}`) : null
     });
   }
   return rows;
@@ -64,25 +65,50 @@ function getAllEmployeeRows() {
   const rows = [];
   for (let i = 1; i < data.length; i++) {
     rows.push({
-      id: data[i][0],
+      id: data[i][0], // placeholder generic ID column (unused)
       employeeId: data[i][1],
       fullName: data[i][2],
       department: data[i][3],
       type: data[i][4],
       status: data[i][5],
       date: data[i][6] || '',
-      time: data[i][7] || ''
+      time: data[i][7] || '',
+      timestamp: (data[i][6] && data[i][7]) ? new Date(`${data[i][6]} ${data[i][7]}`) : null
     });
   }
+  return rows;
+}
   return rows;
 }
 
 function findRowById(sheet, id) {
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === id) return i + 1; // 1-indexed for sheet
+    // Match either generic ID (col 0) or primary identifier (col 1)
+    if (data[i][0] === id || data[i][1] === id) return i + 1; // 1-indexed for sheet
   }
   return -1;
+}
+
+function cleanLegacyRows() {
+  // Clean Visitor sheet
+  const visitorSheet = getSheet();
+  const visitorData = visitorSheet.getDataRange().getValues();
+  for (let i = visitorData.length; i > 1; i--) {
+    const genericId = visitorData[i - 1][0];
+    if (genericId && genericId.toString().trim() !== '') {
+      visitorSheet.deleteRow(i);
+    }
+  }
+  // Clean Employee sheet
+  const employeeSheet = getEmployeeSheet();
+  const employeeData = employeeSheet.getDataRange().getValues();
+  for (let i = employeeData.length; i > 1; i--) {
+    const genericId = employeeData[i - 1][0];
+    if (genericId && genericId.toString().trim() !== '') {
+      employeeSheet.deleteRow(i);
+    }
+  }
 }
 
 // ─── HELPERS ──────────────────────────────────
@@ -141,6 +167,15 @@ function doOptions(e) {
 //   ?search=keyword  - search across all text fields
 //   ?filter=checked-in | checked-out  - filter by status
 function doGet(e) {
+  try {
+    const params = e.parameter || {};
+    const action = (params.action || '').toLowerCase().trim();
+    if (action === 'cleanLegacy') {
+      cleanLegacyRows();
+      return getResponse({ cleaned: true });
+    }
+  } catch (e) { /* ignore if not called with action */ }
+
   try {
     const params = e.parameter || {};
     const action = (params.action || '').toLowerCase().trim();
@@ -217,7 +252,7 @@ function doPost(e) {
         const timeStr = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
 
         sheet.appendRow([
-          id,
+          '', // placeholder for generic ID column
           idNumber,
           fullName.trim(),
           contactNumber.trim(),
@@ -230,7 +265,7 @@ function doPost(e) {
         ]);
 
         return getResponse({
-          id,
+          id: idNumber,
           idNumber,
           fullName: fullName.trim(),
           contactNumber: contactNumber.trim(),
@@ -255,8 +290,8 @@ function doPost(e) {
         const checkoutNow = new Date();
         const checkoutTimeStr = Utilities.formatDate(checkoutNow, 'Asia/Manila', 'hh:mm aa');
         const checkoutDateStr = Utilities.formatDate(checkoutNow, 'Asia/Manila', 'dd/MM/yyyy');
-        sheet.getRange(row, 7).setValue('checked-out');
-        sheet.getRange(row, 10).setValue(checkoutDateStr + ' ' + checkoutTimeStr);
+sheet.getRange(row, 7).setValue('checked-out'); // status column restored
+         sheet.getRange(row, 10).setValue(checkoutDateStr + ' ' + checkoutTimeStr);
 
         return getResponse({ id: checkoutId, status: 'checked-out' });
       }
@@ -290,7 +325,7 @@ function doPost(e) {
         const timeStr = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
 
         sheet.appendRow([
-          id,
+          '', // placeholder for generic ID column
           employeeId,
           fullName.trim(),
           department,
@@ -301,7 +336,7 @@ function doPost(e) {
         ]);
 
         return getResponse({
-          id,
+          id: employeeId,
           employeeId,
           fullName: fullName.trim(),
           department,

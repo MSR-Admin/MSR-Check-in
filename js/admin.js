@@ -492,28 +492,78 @@ let loadingPromise = null;
       .replace(/'/g, '&#039;');
   }
 
-  function formatTime(isoString) {
-    if (!isoString) return '';
-    var date = new Date(isoString);
-    return date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+  /**
+   * Robust date formatter that handles Date objects and strings.
+   */
+  function formatDate(raw) {
+    if (!raw) return '';
+    // Handle JavaScript Date objects (returned by Google Apps Script)
+    if (raw instanceof Date) {
+      return raw.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    var str = String(raw).trim();
+    // If already in MM/DD/YYYY format (from Google Sheets), pass through
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) return str;
+    // Otherwise try parsing as a date
+    var d = new Date(str);
+    if (isNaN(d.getTime())) return str;
+    return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  function formatDate(isoString) {
-    if (!isoString) return '';
-    var date = new Date(isoString);
-    return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  /**
+   * Robust time formatter that handles Date objects and strings.
+   */
+  function formatTime(raw) {
+    if (!raw) return '';
+    // Handle JavaScript Date objects (returned by Google Apps Script)
+    if (raw instanceof Date) {
+      return raw.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    var trimmed = String(raw).trim();
+    // If already looks like a 12-hour time (e.g. "9:36 AM", "12:08 PM"), pass through
+    if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(trimmed)) return trimmed;
+    // Otherwise try parsing as a date
+    var d = new Date(trimmed);
+    if (isNaN(d.getTime())) return trimmed;
+    return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
-  function isToday(isoString) {
-    var date = new Date(isoString);
+  /**
+   * Robust today-check that handles Date objects and strings.
+   */
+  function isToday(raw) {
+    if (!raw) return false;
+    var d;
+    // Handle JavaScript Date objects
+    if (raw instanceof Date) {
+      d = raw;
+    } else {
+      var str = String(raw).trim();
+      // Handle MM/DD/YYYY format from Google Sheets
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+        var parts = str.split('/');
+        d = new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10));
+      } else {
+        d = new Date(raw);
+      }
+    }
+    if (isNaN(d.getTime())) return false;
     var now = new Date();
-    return date.toDateString() === now.toDateString();
+    return d.toDateString() === now.toDateString();
   }
 
-  function timeAgo(isoString) {
+  /**
+   * Robust time-ago calculation.
+   */
+  function timeAgo(raw) {
+    if (!raw) return '';
+    var trimmed = String(raw).trim();
+    // Handle pre-formatted times — cannot compute ago, return as-is
+    if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(trimmed)) return trimmed;
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return trimmed;
     var now = new Date();
-    var date = new Date(isoString);
-    var diffMs = now - date;
+    var diffMs = now - d;
     var diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return t('justNow');
     if (diffMins < 60) return t('minAgo').replace('{n}', diffMins);
@@ -543,21 +593,122 @@ let loadingPromise = null;
   }
 
   // ─── Render Stats ───────────────────────
+  /**
+   * Combine date and time values (Date objects or strings) into a Date object for comparison.
+   */
+  function buildTimestamp(dateVal, timeVal) {
+    var dateD;
+    
+    // Handle Date object for date
+    if (dateVal instanceof Date) {
+      dateD = dateVal;
+    } else {
+      var str = String(dateVal).trim();
+      // Parse MM/DD/YYYY format from Google Sheets
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+        var parts = str.split('/');
+        dateD = new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10));
+      } else {
+        dateD = new Date(str);
+      }
+    }
+    
+    // If date parsing failed, return invalid date
+    if (isNaN(dateD.getTime())) return new Date(NaN);
+    
+    // Handle time component
+    var timeStr = '';
+    if (timeVal instanceof Date) {
+      timeStr = timeVal.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false });
+    } else {
+      timeStr = String(timeVal || '').trim();
+      timeStr = normalizeTime(timeStr);
+    }
+    
+    // Create a full datetime by combining date and time
+    var parts = timeStr.split(':');
+    var hours = parseInt(parts[0], 10) || 0;
+    var minutes = parseInt(parts[1], 10) || 0;
+    
+    var result = new Date(dateD);
+    result.setHours(hours, minutes, 0, 0);
+    return result;
+  }
+
+  /**
+   * Convert various time formats to HH:MM:SS
+   */
+  function normalizeTime(timeStr) {
+    timeStr = String(timeStr).trim();
+    var isPM = /pm$/i.test(timeStr);
+    var isAM = /am$/i.test(timeStr);
+    timeStr = timeStr.replace(/\s*[AP]M\s*$/i, '').trim();
+    var parts = timeStr.split(':');
+    if (parts.length === 2) {
+      var hours = parseInt(parts[0], 10);
+      var minutes = parts[1] || '00';
+      if (isNaN(hours)) hours = 0;
+      if (isPM && hours < 12) hours += 12;
+      if (isAM && hours === 12) hours = 0;
+      return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':00';
+    }
+    return '00:00:00';
+  }
+
   function renderStats(visitors) {
-    var totalToday = visitors.filter(function (v) { return isToday(v.timestamp); }).length;
-    var onSite = visitors.filter(function (v) { return v.status === 'checked-in'; }).length;
-    var recent = visitors.length > 0 ? visitors[0] : null;
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    var totalToday = 0;
+    var onSite = 0;
+    var recentVis = null;
+    var recentTs = today.getTime() - 1; // Start just before today
+
+    for (var i = 0; i < visitors.length; i++) {
+      var v = visitors[i];
+      var ts = buildTimestamp(v.date, v.time);
+      
+      // Check if entry is from today
+      if (ts >= today && ts < today.getTime() + 86400000) {
+        totalToday++;
+      }
+      
+      if (v.status === 'checked-in') {
+        onSite++;
+      }
+      
+      // Track most recent entry
+      if (ts.getTime() > recentTs) {
+        recentTs = ts.getTime();
+        recentVis = v;
+      }
+    }
 
     totalTodayEl.textContent = totalToday;
     onSiteEl.textContent = onSite;
 
-    if (recent && isToday(recent.timestamp)) {
-      recentEntryEl.textContent = recent.fullName.split(' ')[0] + ' · ' + timeAgo(recent.timestamp);
+    if (recentVis) {
+      var ts = buildTimestamp(recentVis.date, recentVis.time);
+      var agoText = timeAgo(ts);
+      recentEntryEl.textContent = recentVis.fullName.split(' ')[0] + ' · ' + agoText;
     } else if (visitors.length > 0) {
       recentEntryEl.textContent = t('noEntriesToday');
     } else {
       recentEntryEl.textContent = t('noDataYet');
     }
+  }
+
+  function timeAgo(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
+    var now = new Date();
+    var diffMs = now - dateObj;
+    var diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return t('justNow');
+    if (diffMins < 60) return t('minAgo').replace('{n}', diffMins);
+    var diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return t('hAgo').replace('{n}', diffHours);
+    var diffDays = Math.floor(diffHours / 24);
+    return t('dAgo').replace('{n}', diffDays);
   }
 
   // ─── Render Visitors Table ─────────────
@@ -578,8 +729,9 @@ let loadingPromise = null;
       var rowClass = isActive ? 'row-active' : 'row-inactive';
       var purposeClass = isActive ? '' : 'purpose-cell--inactive';
       return '<tr class="' + rowClass + '">' +
-        '<td><span class="visitor-id">' + escapeHtml(v.idNumber || '—') + '</span></td>' +
-        '<td><strong>' + escapeHtml(v.fullName) + '</strong></td>' +
+
+
+        ' <td>' + escapeHtml(v.idNumber || '—') + '</td>' + '<td><strong>' + escapeHtml(v.fullName) + '</strong></td>' +
         '<td>' + escapeHtml(v.contactNumber) + '</td>' +
         '<td>' + escapeHtml(v.contactPerson) + '</td>' +
         '<td><div class="purpose-cell ' + purposeClass + '"><div class="purpose-icon"><span class="material-symbols-rounded">' + (purposeIcons[v.purpose] || 'help_outline') + '</span></div><span class="purpose-text">' + escapeHtml(v.purpose) + '</span></div></td>' +
@@ -587,8 +739,8 @@ let loadingPromise = null;
         '<td>' + escapeHtml(formatDate(v.date) || '—') + '</td>' +
         '<td>' + escapeHtml(formatTime(v.time) || '—') + '</td>' +
         '<td>' + (v.status === 'checked-in'
-          ? '<button class="action-btn action-btn--checkout" data-id="' + escapeHtml(v.id) + '">' + t('checkOut') + '</button>'
-          : '<button class="action-btn action-btn--delete" data-id="' + escapeHtml(v.id) + '">' + t('delete') + '</button>') + '</td>' +
+          ? '<button class="action-btn action-btn--checkout" data-id="' + escapeHtml(v.idNumber) + '">' + t('checkOut') + '</button>'
+          : '<button class="action-btn action-btn--delete" data-id="' + escapeHtml(v.idNumber) + '">' + t('delete') + '</button>') + '</td>' +
         '</tr>';
     }).join('');
 
@@ -615,14 +767,14 @@ let loadingPromise = null;
       var isActive = e.status === 'Time-in';
       var rowClass = isActive ? 'row-active' : 'row-inactive';
       return '<tr class="' + rowClass + '">' +
-        '<td><span class="visitor-id">' + escapeHtml(e.employeeId || '—') + '</span></td>' +
-        '<td><strong>' + escapeHtml(e.fullName) + '</strong></td>' +
+
+        ' <td>' + escapeHtml(e.employeeId || '—') + '</td>' + '<td><strong>' + escapeHtml(e.fullName) + '</strong></td>' +
         '<td>' + escapeHtml(e.department) + '</td>' +
         '<td><span class="badge badge--employee">' + escapeHtml(e.type || 'Employee') + '</span></td>' +
         '<td><span class="badge badge--' + (e.status === 'Time-in' ? 'checked-in' : 'checked-out') + '">' + (e.status === 'Time-in' ? t('statusOnSite') : t('statusLeft')) + '</span></td>' +
         '<td>' + escapeHtml(formatDate(e.date) || '—') + '</td>' +
         '<td>' + escapeHtml(formatTime(e.time) || '—') + '</td>' +
-        '<td><button class="action-btn action-btn--delete-employee" data-id="' + escapeHtml(e.id) + '">' + t('delete') + '</button></td>' +
+        '<td><button class="action-btn action-btn--delete-employee" data-id="' + escapeHtml(e.employeeId) + '">' + t('delete') + '</button></td>' +
         '</tr>';
     }).join('');
 
@@ -632,13 +784,13 @@ let loadingPromise = null;
   }
 
   // ─── Check Out Visitor ──────────────────
-  async function checkoutVisitor(id) {
-    var visitor = visitorsCache.find(function (v) { return v.id === id; });
+  async function checkoutVisitor(idNumber) {
+    var visitor = visitorsCache.find(function (v) { return v.idNumber === idNumber; });
     if (!visitor) return;
 
     // Proceed directly without extra confirmation prompt
       try {
-        await sendAction({ action: 'checkout', id: id });
+        await sendAction({ action: 'checkout', id: idNumber });
         showToast(t('checkOutSuccess').replace('{name}', visitor.fullName.split(' ')[0]), 'success');
         if (currentView === 'visitors') await renderDashboard();
       } catch (err) {
@@ -647,13 +799,13 @@ let loadingPromise = null;
   }
 
   // ─── Delete Visitor ─────────────────────
-  async function deleteVisitor(id) {
-    var visitor = visitorsCache.find(function (v) { return v.id === id; });
+  async function deleteVisitor(idNumber) {
+    var visitor = visitorsCache.find(function (v) { return v.idNumber === idNumber; });
     if (!visitor) return;
 
     // Proceed directly without extra confirmation prompt
       try {
-        await sendAction({ action: 'delete', id: id });
+        await sendAction({ action: 'delete', id: idNumber });
         showToast(t('deleteSuccess'), 'success');
         if (currentView === 'visitors') await renderDashboard();
       } catch (err) {
@@ -662,13 +814,13 @@ let loadingPromise = null;
   }
 
   // ─── Delete Employee ────────────────────
-  async function deleteEmployee(id) {
-    var employee = employeesCache.find(function (e) { return e.id === id; });
+  async function deleteEmployee(employeeId) {
+    var employee = employeesCache.find(function (e) { return e.employeeId === employeeId; });
     if (!employee) return;
 
     // Proceed directly without extra confirmation prompt
       try {
-        await sendAction({ action: 'empDelete', id: id });
+        await sendAction({ action: 'empDelete', id: employeeId });
         showToast(t('deleteEmployeeSuccess'), 'success');
         await renderDashboard();
       } catch (err) {
