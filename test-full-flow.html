@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Date/Time Fix</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .test-result { padding: 10px; margin: 5px 0; border-radius: 5px; }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #1a73e8; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Test Date/Time Fix</h1>
+  <div id="results"></div>
+  <h2>Simulated Table Output</h2>
+  <table id="testTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Department</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script>
+    // Simulate Code.gs output (after fix)
+    const mockData = [
+      {
+        employeeId: 'EMP-20260810-2050',
+        fullName: 'Ron Adan',
+        department: 'GCC Team',
+        type: 'Employee',
+        status: 'Time-in',
+        date: '08/10/2026',  // dd/MM/yyyy
+        time: '11:34 AM'
+      },
+      {
+        employeeId: 'EMP-20260810-9874',
+        fullName: 'Ron Adan',
+        department: 'GCC Team',
+        type: 'Employee',
+        status: 'Time-in',
+        date: '08/10/2026',
+        time: '12:16 PM'
+      },
+      {
+        employeeId: 'EMP-20260806-1843',
+        fullName: 'Wilma Bartolome',
+        department: 'Accounting',
+        type: 'Employee',
+        status: 'Time-in',
+        date: '06/08/2026',
+        time: '7:02 AM'
+      }
+    ];
+
+    // Test functions (from admin.js)
+    function formatDate(raw) {
+      if (!raw) return '';
+      if (raw instanceof Date) {
+        return raw.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      var str = String(raw).trim();
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) return str;
+      var d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatTime(raw) {
+      if (!raw) return '';
+      if (raw instanceof Date) {
+        return raw.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+      var trimmed = String(raw).trim();
+      if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(trimmed)) return trimmed;
+      var d = new Date(trimmed);
+      if (isNaN(d.getTime())) return trimmed;
+      return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    // Run tests
+    const resultsDiv = document.getElementById('results');
+    let allPass = true;
+
+    // Test 1: formatDate passes through dd/MM/yyyy
+    const test1 = formatDate('08/10/2026');
+    const pass1 = test1 === '08/10/2026';
+    allPass = allPass && pass1;
+    resultsDiv.innerHTML += `<div class="test-result ${pass1 ? 'pass' : 'fail'}">Test 1: formatDate('08/10/2026') = '${test1}' - ${pass1 ? 'PASS' : 'FAIL'}</div>`;
+
+    // Test 2: formatTime passes through "11:34 AM"
+    const test2 = formatTime('11:34 AM');
+    const pass2 = test2 === '11:34 AM';
+    allPass = allPass && pass2;
+    resultsDiv.innerHTML += `<div class="test-result ${pass2 ? 'pass' : 'fail'}">Test 2: formatTime('11:34 AM') = '${test2}' - ${pass2 ? 'PASS' : 'FAIL'}</div>`;
+
+    // Test 3: formatTime passes through "12:16 PM"
+    const test3 = formatTime('12:16 PM');
+    const pass3 = test3 === '12:16 PM';
+    allPass = allPass && pass3;
+    resultsDiv.innerHTML += `<div class="test-result ${pass3 ? 'pass' : 'fail'}">Test 3: formatTime('12:16 PM') = '${test3}' - ${pass3 ? 'PASS' : 'FAIL'}</div>`;
+
+    // Test 4: formatDate handles Date object
+    const test4 = formatDate(new Date(2026, 7, 10, 11, 34, 0));
+    const pass4 = test4 === 'Aug 10, 2026';
+    allPass = allPass && pass4;
+    resultsDiv.innerHTML += `<div class="test-result ${pass4 ? 'pass' : 'fail'}">Test 4: formatDate(Date) = '${test4}' - ${pass4 ? 'PASS' : 'FAIL'}</div>`;
+
+    // Test 5: formatDate handles MM/DD/YYYY string
+    const test5 = formatDate('08/10/2026');
+    const pass5 = test5 === '08/10/2026';
+    allPass = allPass && pass5;
+    resultsDiv.innerHTML += `<div class="test-result ${pass5 ? 'pass' : 'fail'}">Test 5: formatDate('08/10/2026') = '${test5}' - ${pass5 ? 'PASS' : 'FAIL'}</div>`;
+
+    resultsDiv.innerHTML += `<div class="test-result ${allPass ? 'pass' : 'fail'}" style="font-weight: bold; margin-top: 10px;">Overall: ${allPass ? 'ALL TESTS PASSED ✓' : 'SOME TESTS FAILED ✗'}</div>`;
+
+    // Render table
+    const tbody = document.getElementById('tableBody');
+    mockData.forEach(emp => {
+      const row = tbody.insertRow();
+      row.insertCell(0).textContent = emp.employeeId;
+      row.insertCell(1).textContent = emp.fullName;
+      row.insertCell(2).textContent = emp.department;
+      row.insertCell(3).textContent = emp.status;
+      row.insertCell(4).textContent = formatDate(emp.date);
+      row.insertCell(5).textContent = formatTime(emp.time);
+    });
+  </script>
+</body>
+</html>
