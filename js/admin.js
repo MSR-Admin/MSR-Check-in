@@ -343,32 +343,24 @@ let toastTimer = null;
 
   // ─── Toast Notification ─────────────────
   function showToast(message, type, duration = 4000) {
-// Suppress specific persistent error toast that may linger from previous page loads
-if (message && message.includes('Failed to load dashboard')) {
-  return;
-}
-// Helper to hide toast and redirect to dashboard
-function closeToastAndRedirect() {
-  toast.classList.remove('show');
-  if (toastTimer) clearTimeout(toastTimer);
-  window.location.href = 'index.html';
-}
-const isError = type === 'error';
-const icon = isError ? '❌' : '✅';
-const outcomeLabel = isError ? 'Failed:' : 'Success:';
-// Build toast content with icon, label, message and close button
-toast.innerHTML = `${icon}<span class="toast-label">${outcomeLabel}</span> ${message}<span class="close-btn">×</span>`;
-toast.className = 'toast ' + (type || '');
-// Force reflow and show
-void toast.offsetWidth;
-toast.classList.add('show');
-// Attach close handler (replace any previous)
-const closeBtn = toast.querySelector('.close-btn');
-if (closeBtn) {
-  closeBtn.onclick = closeToastAndRedirect;
-}
-// No auto‑hide – toast remains until manually closed
-}
+    // Suppress specific persistent error toast that may linger from previous page loads
+    if (message && message.includes('Failed to load dashboard')) {
+      return;
+    }
+    const isError = type === 'error';
+    const icon = isError ? '❌' : '✅';
+    const outcomeLabel = isError ? 'Failed:' : 'Success:';
+    // Build toast content without close button
+    toast.innerHTML = `${icon}<span class="toast-label">${outcomeLabel}</span> ${message}`;
+    toast.className = 'toast ' + (type || '');
+    // Force reflow and show
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    // Auto‑hide after duration (default 4000 ms)
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, duration);
+  }
 
   // ─── API Helpers ──────────────────────────
   // ---------- Mock data (in‑memory) ----------
