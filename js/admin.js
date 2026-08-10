@@ -342,7 +342,7 @@ let toastTimer = null;
   }
 
   // ─── Toast Notification ─────────────────
-  function showToast(message, type, duration = 4000) {
+  function showToast(message, type) {
     // Suppress specific persistent error toast that may linger from previous page loads
     if (message && message.includes('Failed to load dashboard')) {
       return;
@@ -350,16 +350,17 @@ let toastTimer = null;
     const isError = type === 'error';
     const icon = isError ? '❌' : '✅';
     const outcomeLabel = isError ? 'Failed:' : 'Success:';
-    // Build toast content without close button
-    toast.innerHTML = `${icon}<span class="toast-label">${outcomeLabel}</span> ${message}`;
+    // Build toast content with close button (static until dismissed)
+    toast.innerHTML = `${icon}<span class="toast-label">${outcomeLabel}</span> ${message}<span class="close-btn">×</span>`;
     toast.className = 'toast ' + (type || '');
     // Force reflow and show
     void toast.offsetWidth;
     toast.classList.add('show');
-    // Auto‑hide after duration (default 4000 ms)
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, duration);
+    // Attach close handler (remove toast on click)
+    const closeBtn = toast.querySelector('.close-btn');
+    if (closeBtn) {
+      closeBtn.onclick = () => toast.classList.remove('show');
+    }
   }
 
   // ─── API Helpers ──────────────────────────
