@@ -41,6 +41,16 @@ function getAllRows() {
   if (data.length <= 1) return []; // Only header row
   const rows = [];
   for (let i = 1; i < data.length; i++) {
+    // Convert Date objects to formatted strings for consistent handling
+    const dateVal = data[i][7];
+    const timeVal = data[i][8];
+    const dateStr = dateVal instanceof Date 
+      ? Utilities.formatDate(dateVal, 'Asia/Manila', 'dd/MM/yyyy')
+      : (dateVal || '');
+    const timeStr = timeVal instanceof Date
+      ? Utilities.formatDate(timeVal, 'Asia/Manila', 'hh:mm aa')
+      : (timeVal || '');
+    
     rows.push({
       id: data[i][0], // placeholder generic ID column (unused)
       idNumber: data[i][1],
@@ -49,10 +59,10 @@ function getAllRows() {
       contactPerson: data[i][4],
       purpose: data[i][5],
       status: data[i][6],
-      date: data[i][7] || '',
-      time: data[i][8] || '',
+      date: dateStr,
+      time: timeStr,
       checkoutTime: data[i][9] || null,
-      timestamp: (data[i][7] && data[i][8]) ? new Date(`${data[i][7]} ${data[i][8]}`) : null
+      timestamp: (dateVal && timeVal) ? new Date(dateStr + ' ' + timeStr) : null
     });
   }
   return rows;
@@ -64,6 +74,16 @@ function getAllEmployeeRows() {
   if (data.length <= 1) return [];
   const rows = [];
   for (let i = 1; i < data.length; i++) {
+    // Convert Date objects to formatted strings for consistent handling
+    const dateVal = data[i][6];
+    const timeVal = data[i][7];
+    const dateStr = dateVal instanceof Date
+      ? Utilities.formatDate(dateVal, 'Asia/Manila', 'dd/MM/yyyy')
+      : (dateVal || '');
+    const timeStr = timeVal instanceof Date
+      ? Utilities.formatDate(timeVal, 'Asia/Manila', 'hh:mm aa')
+      : (timeVal || '');
+
     rows.push({
       id: data[i][0], // placeholder generic ID column (unused)
       employeeId: data[i][1],
@@ -71,9 +91,9 @@ function getAllEmployeeRows() {
       department: data[i][3],
       type: data[i][4],
       status: data[i][5],
-      date: data[i][6] || '',
-      time: data[i][7] || '',
-      timestamp: (data[i][6] && data[i][7]) ? new Date(`${data[i][6]} ${data[i][7]}`) : null
+      date: dateStr,
+      time: timeStr,
+      timestamp: (dateVal && timeVal) ? new Date(dateStr + ' ' + timeStr) : null
     });
   }
   return rows;

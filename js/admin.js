@@ -657,19 +657,20 @@ let loadingPromise = null;
 
   function renderStats(visitors) {
     var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var todayEnd = new Date(todayStart.getTime() + 86400000); // start of tomorrow
     
     var totalToday = 0;
     var onSite = 0;
     var recentVis = null;
-    var recentTs = today.getTime() - 1; // Start just before today
+    var recentTs = todayStart.getTime() - 1; // Start just before today
 
     for (var i = 0; i < visitors.length; i++) {
       var v = visitors[i];
       var ts = buildTimestamp(v.date, v.time);
       
       // Check if entry is from today
-      if (ts >= today && ts < today.getTime() + 86400000) {
+      if (ts >= todayStart && ts < todayEnd) {
         totalToday++;
       }
       
@@ -930,17 +931,27 @@ let loadingPromise = null;
       var query = searchInput.value.trim();
       employeesCache = await fetchEmployees(query);
 
-      var totalToday = employeesCache.filter(function (e) { return isToday(e.timestamp); }).length;
+      var todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      var todayEnd = new Date(todayStart.getTime() + 86400000);
+
+      var totalToday = employeesCache.filter(function (e) {
+        var ts = buildTimestamp(e.date, e.time);
+        return ts >= todayStart && ts < todayEnd;
+      }).length;
       var onSite = employeesCache.filter(function (e) { return e.status === 'Time-in'; }).length;
       var recent = employeesCache.length > 0 ? employeesCache[0] : null;
 
       totalTodayEl.textContent = totalToday;
       onSiteEl.textContent = onSite;
 
-      if (recent && isToday(recent.timestamp)) {
-        recentEntryEl.textContent = recent.fullName.split(' ')[0] + ' · ' + timeAgo(recent.timestamp);
-      } else if (employeesCache.length > 0) {
-        recentEntryEl.textContent = t('noEntriesToday');
+      if (recent) {
+        var ts = buildTimestamp(recent.date, recent.time);
+        if (ts >= todayStart && ts < todayEnd) {
+          recentEntryEl.textContent = recent.fullName.split(' ')[0] + ' · ' + timeAgo(ts);
+        } else {
+          recentEntryEl.textContent = t('noEntriesToday');
+        }
       } else {
         recentEntryEl.textContent = t('noDataYet');
       }
