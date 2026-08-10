@@ -494,6 +494,7 @@ let loadingPromise = null;
 
   /**
    * Robust date formatter that handles Date objects and strings.
+   * Google Sheets returns dates in dd/MM/yyyy format (Philippine format).
    */
   function formatDate(raw) {
     if (!raw) return '';
@@ -502,8 +503,17 @@ let loadingPromise = null;
       return raw.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
     }
     var str = String(raw).trim();
-    // If already in MM/DD/YYYY format (from Google Sheets), pass through
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) return str;
+    // Parse dd/MM/yyyy format from Google Sheets (Philippine date format)
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+      var parts = str.split('/');
+      var day = parseInt(parts[0], 10);
+      var month = parseInt(parts[1], 10);
+      var year = parseInt(parts[2], 10);
+      // Create date with explicit dd/MM/yyyy parsing
+      var d = new Date(year, month - 1, day);
+      if (isNaN(d.getTime())) return str;
+      return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
     // Otherwise try parsing as a date
     var d = new Date(str);
     if (isNaN(d.getTime())) return str;
@@ -595,6 +605,7 @@ let loadingPromise = null;
   // ─── Render Stats ───────────────────────
   /**
    * Combine date and time values (Date objects or strings) into a Date object for comparison.
+   * Google Sheets returns dates in dd/MM/yyyy format (Philippine format).
    */
   function buildTimestamp(dateVal, timeVal) {
     var dateD;
@@ -604,10 +615,13 @@ let loadingPromise = null;
       dateD = dateVal;
     } else {
       var str = String(dateVal).trim();
-      // Parse MM/DD/YYYY format from Google Sheets
+      // Parse dd/MM/yyyy format from Google Sheets (Philippine date format)
       if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
         var parts = str.split('/');
-        dateD = new Date(parseInt(parts[2], 10), parseInt(parts[0], 10) - 1, parseInt(parts[1], 10));
+        var day = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        var year = parseInt(parts[2], 10);
+        dateD = new Date(year, month - 1, day);
       } else {
         dateD = new Date(str);
       }
