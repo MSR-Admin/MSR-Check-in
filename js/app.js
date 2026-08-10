@@ -356,14 +356,7 @@
   });
 
   // ─── Show Toast Notification ────────────
-  function showToast(message, type) {
-    var icon = type === 'error' ? '❌' : '✅';
-    toast.innerHTML = icon + ' ' + message;
-    toast.className = 'toast ' + (type || '');
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    setTimeout(function () { toast.classList.remove('show'); }, 3500);
-  }
+  function showToast(){ /* toast disabled for visitor/employee */ }
 
   // ─── API Call: Check-in ───────────────────
   async function submitCheckin(visitorData) {
