@@ -1,8 +1,10 @@
 # macOS
 .DS_Store
 
-# IDE / editor
+# IDE / editor & agent tools
+.agnes/
 .kilo/
+.openclaude/
 
 # Dependencies
 node_modules/
