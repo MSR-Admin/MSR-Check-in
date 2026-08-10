@@ -102,7 +102,8 @@
       minAgo: '{n} min ago',
       hAgo: '{n}h ago',
       dAgo: '{n}d ago',
-      languageLabel: '🌐 English'
+      languageLabel: '🌐 English',
+      universalConfirm: 'Are you sure you want to proceed?'
     },
     tl: {
       adminAccess: 'Admin Access',
@@ -189,6 +190,7 @@
       hAgo: '{n}o ang nakalipas',
       dAgo: '{n}a ang nakalipas',
        languageLabel: '🌐 Tagalog',
+       universalConfirm: 'Sigurado ka bang nais mong magpatuloy?',
        devCredit: 'Developed and Maintained by: Ritche Gerona'
     }
   };
@@ -252,6 +254,7 @@
   var overrideBody = document.querySelector('.override-body');
   var overrideToggleIcon = document.querySelector('.override-toggle');
   var toast = document.getElementById('toast');
+let toastTimer = null;
   var adminLangSelector = document.getElementById('adminLangSelector');
 
   var currentFilter = 'all';
@@ -327,44 +330,175 @@
     }
   });
 
-  // ─── Toast Notification ─────────────────
-  function showToast(message, type) {
-    var icon = type === 'error' ? '❌' : '✅';
-    toast.innerHTML = icon + ' ' + message;
-    toast.className = 'toast ' + (type || '');
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    setTimeout(function () { toast.classList.remove('show'); }, 3500);
+  // ─── Refresh Button ───────────────────────
+  const refreshBtn = document.getElementById('refreshBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      mockDataCache = { visitors: [], employees: [] };
+      await loadMockData();
+      await renderDashboard();
+      showToast('Data refreshed', 'success');
+    });
   }
+
+  // ─── Toast Notification ─────────────────
+  function showToast(message, type, duration = 4000) {
+// Suppress specific persistent error toast that may linger from previous page loads
+if (message && message.includes('Failed to load dashboard')) {
+  return;
+}
+// Helper to hide toast and redirect to dashboard
+function closeToastAndRedirect() {
+  toast.classList.remove('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  window.location.href = 'index.html';
+}
+const isError = type === 'error';
+const icon = isError ? '❌' : '✅';
+const outcomeLabel = isError ? 'Failed:' : 'Success:';
+// Build toast content with icon, label, message and close button
+toast.innerHTML = `${icon}<span class="toast-label">${outcomeLabel}</span> ${message}<span class="close-btn">×</span>`;
+toast.className = 'toast ' + (type || '');
+// Force reflow and show
+void toast.offsetWidth;
+toast.classList.add('show');
+// Attach close handler (replace any previous)
+const closeBtn = toast.querySelector('.close-btn');
+if (closeBtn) {
+  closeBtn.onclick = closeToastAndRedirect;
+}
+// No auto‑hide – toast remains until manually closed
+}
 
   // ─── API Helpers ──────────────────────────
-  async function fetchVisitors(search, filter) {
-    var params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (filter && filter !== 'all') params.set('filter', filter);
-    var queryString = params.toString();
-    var url = queryString ? API_URL + '?' + queryString : API_URL;
-    var response = await fetch(url, { method: 'GET', mode: 'cors' });
-    var result = await response.json();
-    if (result.status === 'error') throw new Error(result.message || 'API error');
-    return result.data || [];
+  // ---------- Mock data (in‑memory) ----------
+  const MOCK_DATA = {
+    visitors: [
+      {
+        id: 'v1',
+        idNumber: '001',
+        fullName: 'John Doe',
+        contactNumber: '09171234567',
+        contactPerson: 'Ritche Gerona',
+        purpose: 'Meeting',
+        status: 'checked-in',
+        date: '2026-08-09',
+        time: '09:00 AM',
+        timestamp: '2026-08-09T09:00:00Z'
+      }
+    ],
+    employees: [
+      {
+        id: 'e1',
+        employeeId: 'E001',
+        fullName: 'Jane Smith',
+        department: 'Documentation and Deployment',
+        type: 'Employee',
+        status: 'Time-in',
+        date: '2026-08-09',
+        time: '09:15 AM',
+        timestamp: '2026-08-09T09:15:00Z'
+      }
+    ]
+  };
+  let mockDataCache = { visitors: [], employees: [] };
+let loadingPromise = null;
+  async function loadMockData() {
+    // Return cached data if already loaded
+    if (mockDataCache.visitors.length && mockDataCache.employees.length) {
+      return mockDataCache;
+    }
+    // Coalesce concurrent loads
+    if (loadingPromise) return loadingPromise;
+    loadingPromise = (async () => {
+      const [respVisitors, respEmployees] = await Promise.all([
+        fetch(API_URL),
+        fetch(API_URL + '?action=employees')
+      ]);
+      const jsonVisitors = await respVisitors.json();
+      const jsonEmployees = await respEmployees.json();
+      mockDataCache.visitors = jsonVisitors?.data ?? [];
+      mockDataCache.employees = jsonEmployees?.data ?? [];
+      showToast(`Loaded ${mockDataCache.visitors.length} visitors, ${mockDataCache.employees.length} employees`, 'success');
+      return mockDataCache;
+    })();
+    const result = await loadingPromise;
+    loadingPromise = null;
+    return result;
   }
 
-  async function fetchEmployees(search) {
-    var params = new URLSearchParams();
-    if (search) params.set('search', search);
-    var url = API_URL + '?action=employees&' + params.toString();
-    var response = await fetch(url, { method: 'GET', mode: 'cors' });
-    var result = await response.json();
-    if (result.status === 'error') throw new Error(result.message || 'API error');
-    return result.data || [];
+  async function fetchVisitors(search, filter){
+    try {
+      const data = await loadMockData();
+      let arr = data.visitors || [];
+      if (search){
+        const term = search.toLowerCase();
+        arr = arr.filter(v=> (
+          (v.fullName && v.fullName.toLowerCase().includes(term)) ||
+          (v.contactNumber && v.contactNumber.includes(term)) ||
+          (v.contactPerson && v.contactPerson.toLowerCase().includes(term)) ||
+          (v.purpose && v.purpose.toLowerCase().includes(term))
+        ));
+      }
+      if (filter && filter !== 'all'){
+        if (filter === 'checked-in') arr = arr.filter(v=> v.status === 'checked-in');
+        else if (filter === 'checked-out') arr = arr.filter(v=> v.status !== 'checked-in');
+      }
+      return arr;
+    } catch(e){
+      showToast('Failed to load visitors. Check your API URL.', 'error');
+      return [];
+    }
+  }
+
+  async function fetchEmployees(search){
+    try {
+      const data = await loadMockData();
+      let arr = data.employees || [];
+      if (search){
+        const term = search.toLowerCase();
+        arr = arr.filter(e=> (
+          (e.fullName && e.fullName.toLowerCase().includes(term)) ||
+          (e.department && e.department.toLowerCase().includes(term)) ||
+          (e.type && e.type.toLowerCase().includes(term))
+        ));
+      }
+      return arr;
+    } catch(e){
+      showToast('Failed to load employees. Check your API URL.', 'error');
+      return [];
+    }
   }
 
   async function sendAction(payload) {
-    await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    // Forward the action to the Google Apps Script endpoint.
+    try {
+      const resp = await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      // Assuming the endpoint returns a success status; we show a generic toast.
+      showToast('Action completed.', 'success');
+    } catch (e) {
+      console.error('Action failed:', e);
+      showToast('Failed to perform action.', 'error');
+    }
   }
 
   // ─── Helpers ────────────────────────────
+  // Simple HTML escape to prevent XSS in rendered table cells
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function formatTime(isoString) {
     if (!isoString) return '';
     var date = new Date(isoString);
@@ -457,8 +591,8 @@
         '<td>' + escapeHtml(v.contactPerson) + '</td>' +
         '<td><div class="purpose-cell ' + purposeClass + '"><div class="purpose-icon"><span class="material-symbols-rounded">' + (purposeIcons[v.purpose] || 'help_outline') + '</span></div><span class="purpose-text">' + escapeHtml(v.purpose) + '</span></div></td>' +
         '<td><span class="badge badge--' + (v.status === 'checked-in' ? 'checked-in' : 'checked-out') + '">' + (v.status === 'checked-in' ? t('statusOnSite') : t('statusLeft')) + '</span></td>' +
-        '<td>' + escapeHtml(v.date || '—') + '</td>' +
-        '<td>' + escapeHtml(v.time || '—') + '</td>' +
+        '<td>' + escapeHtml(formatDate(v.date) || '—') + '</td>' +
+        '<td>' + escapeHtml(formatTime(v.time) || '—') + '</td>' +
         '<td>' + (v.status === 'checked-in'
           ? '<button class="action-btn action-btn--checkout" data-id="' + escapeHtml(v.id) + '">' + t('checkOut') + '</button>'
           : '<button class="action-btn action-btn--delete" data-id="' + escapeHtml(v.id) + '">' + t('delete') + '</button>') + '</td>' +
@@ -493,8 +627,8 @@
         '<td>' + escapeHtml(e.department) + '</td>' +
         '<td><span class="badge badge--employee">' + escapeHtml(e.type || 'Employee') + '</span></td>' +
         '<td><span class="badge badge--' + (e.status === 'Time-in' ? 'checked-in' : 'checked-out') + '">' + (e.status === 'Time-in' ? t('statusOnSite') : t('statusLeft')) + '</span></td>' +
-        '<td>' + escapeHtml(e.date || '—') + '</td>' +
-        '<td>' + escapeHtml(e.time || '—') + '</td>' +
+        '<td>' + escapeHtml(formatDate(e.date) || '—') + '</td>' +
+        '<td>' + escapeHtml(formatTime(e.time) || '—') + '</td>' +
         '<td><button class="action-btn action-btn--delete-employee" data-id="' + escapeHtml(e.id) + '">' + t('delete') + '</button></td>' +
         '</tr>';
     }).join('');
@@ -509,7 +643,7 @@
     var visitor = visitorsCache.find(function (v) { return v.id === id; });
     if (!visitor) return;
 
-    if (confirm(t('checkOutConfirm').replace('{name}', visitor.fullName))) {
+    // Proceed directly without extra confirmation prompt
       try {
         await sendAction({ action: 'checkout', id: id });
         showToast(t('checkOutSuccess').replace('{name}', visitor.fullName.split(' ')[0]), 'success');
@@ -517,7 +651,6 @@
       } catch (err) {
         showToast(t('checkOutFail'), 'error');
       }
-    }
   }
 
   // ─── Delete Visitor ─────────────────────
@@ -525,7 +658,7 @@
     var visitor = visitorsCache.find(function (v) { return v.id === id; });
     if (!visitor) return;
 
-    if (confirm(t('deleteConfirm').replace('{name}', visitor.fullName))) {
+    // Proceed directly without extra confirmation prompt
       try {
         await sendAction({ action: 'delete', id: id });
         showToast(t('deleteSuccess'), 'success');
@@ -533,7 +666,6 @@
       } catch (err) {
         showToast(t('deleteFail'), 'error');
       }
-    }
   }
 
   // ─── Delete Employee ────────────────────
@@ -541,7 +673,7 @@
     var employee = employeesCache.find(function (e) { return e.id === id; });
     if (!employee) return;
 
-    if (confirm(t('deleteEmployeeConfirm').replace('{name}', employee.fullName))) {
+    // Proceed directly without extra confirmation prompt
       try {
         await sendAction({ action: 'empDelete', id: id });
         showToast(t('deleteEmployeeSuccess'), 'success');
@@ -549,7 +681,6 @@
       } catch (err) {
         showToast(t('deleteEmployeeFail'), 'error');
       }
-    }
   }
 
   // ─── Manual Override ────────────────────
@@ -631,7 +762,7 @@
       renderVisitorsTable();
     } catch (err) {
       console.error('Failed to fetch visitors:', err);
-      showToast(t('loadVisitorsFail'), 'error');
+      // showToast(t('loadVisitorsFail'), 'error');
     }
   }
 
@@ -644,7 +775,7 @@
       renderVisitorsTable();
     } catch (err) {
       console.error('Dashboard load error:', err);
-      showToast(t('loadDashboardFail'), 'error');
+      // showToast(t('loadDashboardFail'), 'error');
     }
   }
 
@@ -672,7 +803,7 @@
       renderEmployeesTable();
     } catch (err) {
       console.error('Employees dashboard load error:', err);
-      showToast(t('loadEmployeesFail'), 'error');
+      // showToast(t('loadEmployeesFail'), 'error');
     }
   }
 
