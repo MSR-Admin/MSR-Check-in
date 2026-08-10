@@ -335,11 +335,27 @@ let toastTimer = null;
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       mockDataCache = { visitors: [], employees: [] };
-      await loadMockData();
+      await loadMockData(true);
       await renderDashboard();
       showToast('Data refreshed', 'success');
     });
   }
+
+  // ─── Auto-refresh: keep dashboard in sync with Google Sheet ──
+  // Refresh data every 15 seconds so new check-ins appear automatically
+  setInterval(async function () {
+    if (!isAuthenticated()) return;
+    try {
+      await loadMockData(true);
+      if (currentView === 'visitors') {
+        await renderVisitorsDashboard();
+      } else {
+        await renderEmployeesDashboard();
+      }
+    } catch (e) {
+      // Silent - don't spam errors on auto-refresh
+    }
+  }, 15000);
 
   // ─── Toast Notification ─────────────────
   function showToast(message, type) {
@@ -395,25 +411,101 @@ let toastTimer = null;
     ]
   };
   let mockDataCache = { visitors: [], employees: [] };
-let loadingPromise = null;
-  async function loadMockData() {
-    // Return cached data if already loaded
-    if (mockDataCache.visitors.length && mockDataCache.employees.length) {
+  let loadingPromise = null;
+  let lastFetchTime = 0;
+  const CACHE_TTL = 15000; // 15 seconds - always fetch fresh data after this
+
+  /**
+   * Normalize visitor data to handle both old and new API formats.
+   * Old API had a placeholder ID column causing off-by-one field mapping.
+   * New API correctly maps ID Number as the first field.
+   */
+  function normalizeVisitor(v) {
+    if (!v) return v;
+    // Detect old API format: idNumber contains a name (not starting with VIS-)
+    if (v.idNumber && !String(v.idNumber).startsWith('VIS-') && !String(v.idNumber).includes('-') && v.fullName) {
+      // Old format: { id, idNumber: fullName, fullName: contactNumber, ... }
+      var idNum = v.id || v.idNumber;
+      var fName = v.idNumber || v.fullName;
+      var contact = v.fullName || v.contactNumber;
+      var person = v.contactNumber || v.contactPerson;
+      var purpose = v.contactPerson || v.purpose;
+      var status = v.purpose || v.status;
+      var date = v.status || v.date;
+      var time = v.time;
+      return {
+        idNumber: idNum,
+        fullName: fName,
+        contactNumber: contact,
+        contactPerson: person,
+        purpose: purpose,
+        status: status,
+        date: date,
+        time: time,
+        checkoutTime: v.checkoutTime || null,
+        timestamp: v.timestamp || null
+      };
+    }
+    return v;
+  }
+
+  /**
+   * Normalize employee data to handle both old and new API formats.
+   * Old API had a placeholder ID column causing off-by-one field mapping.
+   * New API correctly maps Employee ID as the first field.
+   */
+  function normalizeEmployee(e) {
+    if (!e) return e;
+    // Detect old API format: employeeId contains a name (not starting with EMP-)
+    if (e.employeeId && !String(e.employeeId).startsWith('EMP-') && !String(e.employeeId).includes('-') && e.fullName) {
+      // Old format: { id, employeeId: fullName, fullName: department, ... }
+      var empId = e.id || e.employeeId;
+      var fName = e.employeeId || e.fullName;
+      var dept = e.fullName || e.department;
+      var type = e.department || e.type;
+      var status = e.type || e.status;
+      var date = e.status || e.date;
+      var time = e.time;
+      return {
+        employeeId: empId,
+        fullName: fName,
+        department: dept,
+        type: type,
+        status: status,
+        date: date,
+        time: time,
+        timestamp: e.timestamp || null
+      };
+    }
+    return e;
+  }
+
+  async function loadMockData(forceRefresh) {
+    // If we have cached data and it's fresh, return it
+    const now = Date.now();
+    if (!forceRefresh && mockDataCache.visitors.length && mockDataCache.employees.length && (now - lastFetchTime) < CACHE_TTL) {
       return mockDataCache;
     }
     // Coalesce concurrent loads
     if (loadingPromise) return loadingPromise;
     loadingPromise = (async () => {
-      const [respVisitors, respEmployees] = await Promise.all([
-        fetch(API_URL),
-        fetch(API_URL + '?action=employees')
-      ]);
-      const jsonVisitors = await respVisitors.json();
-      const jsonEmployees = await respEmployees.json();
-      mockDataCache.visitors = jsonVisitors?.data ?? [];
-      mockDataCache.employees = jsonEmployees?.data ?? [];
-      showToast(`Loaded ${mockDataCache.visitors.length} visitors, ${mockDataCache.employees.length} employees`, 'success');
-      return mockDataCache;
+      try {
+        const [respVisitors, respEmployees] = await Promise.all([
+          fetch(API_URL + '?t=' + now),
+          fetch(API_URL + '?action=employees&t=' + now)
+        ]);
+        const jsonVisitors = await respVisitors.json();
+        const jsonEmployees = await respEmployees.json();
+        // Normalize data to handle old API format
+        mockDataCache.visitors = (jsonVisitors?.data ?? []).map(normalizeVisitor);
+        mockDataCache.employees = (jsonEmployees?.data ?? []).map(normalizeEmployee);
+        lastFetchTime = Date.now();
+        return mockDataCache;
+      } catch (e) {
+        console.error('Failed to load data:', e);
+        // Return whatever we have cached, even if stale
+        return mockDataCache;
+      }
     })();
     const result = await loadingPromise;
     loadingPromise = null;
@@ -472,7 +564,9 @@ let loadingPromise = null;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      // Assuming the endpoint returns a success status; we show a generic toast.
+      // Invalidate cache so next render fetches fresh data from the sheet
+      lastFetchTime = 0;
+      mockDataCache = { visitors: [], employees: [] };
       showToast('Action completed.', 'success');
     } catch (e) {
       console.error('Action failed:', e);
@@ -498,20 +592,43 @@ let loadingPromise = null;
    */
   function formatDate(raw) {
     if (!raw) return '';
-    // Handle JavaScript Date objects (returned by Google Apps Script)
+    // Handle raw Date objects (Google Sheets returns these from getValues())
     if (raw instanceof Date) {
+      // Reject the 1899 epoch date (Google Sheets placeholder for empty dates)
+      if (raw.getFullYear() < 1900) return '';
       return raw.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
     }
     var str = String(raw).trim();
-    // Parse dd/MM/yyyy format from Google Sheets (Philippine date format)
+    // Parse dd/MM/yyyy or MM/dd/yyyy format
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
       var parts = str.split('/');
-      var day = parseInt(parts[0], 10);
-      var month = parseInt(parts[1], 10);
+      var first = parseInt(parts[0], 10);
+      var second = parseInt(parts[1], 10);
       var year = parseInt(parts[2], 10);
-      // Create date with explicit dd/MM/yyyy parsing
+      var day, month;
+      // If first > 12, it must be DD/MM/yyyy (Philippine format)
+      // If second > 12, it must be MM/DD/yyyy (US format)
+      // If both <= 12, default to DD/MM/yyyy (Philippine format)
+      if (first > 12) {
+        day = first;
+        month = second;
+      } else if (second > 12) {
+        day = second;
+        month = first;
+      } else {
+        day = first;
+        month = second;
+      }
       var d = new Date(year, month - 1, day);
       if (isNaN(d.getTime())) return str;
+      return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    // Handle ISO date strings like "2026-08-10T06:07:00.000Z" or "1899-12-30T01:36:00.000Z"
+    if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+      var d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      // Reject the 1899 epoch date
+      if (d.getFullYear() < 1900) return '';
       return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
     }
     // Otherwise try parsing as a date
@@ -525,13 +642,27 @@ let loadingPromise = null;
    */
   function formatTime(raw) {
     if (!raw) return '';
-    // Handle JavaScript Date objects (returned by Google Apps Script)
+    // Handle JavaScript Date objects
     if (raw instanceof Date) {
+      // For 1899 epoch dates, extract just the time portion (Google Sheets stores time-only as 1899-12-30)
+      if (raw.getFullYear() < 1900) {
+        return raw.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
       return raw.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
     }
     var trimmed = String(raw).trim();
     // If already looks like a 12-hour time (e.g. "9:36 AM", "12:08 PM"), pass through
     if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(trimmed)) return trimmed;
+    // Handle ISO strings like "2026-08-10T06:07:00.000Z" or "1899-12-30T01:36:00.000Z"
+    if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
+      var d = new Date(trimmed);
+      if (isNaN(d.getTime())) return trimmed;
+      // For 1899 epoch dates, extract just the time portion
+      if (d.getFullYear() < 1900) {
+        return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+      return d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
     // Otherwise try parsing as a date
     var d = new Date(trimmed);
     if (isNaN(d.getTime())) return trimmed;
