@@ -521,6 +521,10 @@ body {
 #employeeSuccessModal .modal-content {
   background: var(--card-bg);
 }
+#visitorSuccessModal .modal-content {
+  max-width: none;
+  width: 100%;
+}
 
 .modal-content h3 { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 24px; }
 
