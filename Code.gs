@@ -7,8 +7,8 @@
 const SHEET_NAME = 'Visitors';
 const EMPLOYEE_SHEET_NAME = 'Employees';
 const ADMIN_PIN = '1234';
-const HEADERS = ['ID Number', 'Full Name', 'Contact Number', 'Contact Person', 'Purpose', 'Status', 'Date', 'Time', 'Checkout Time'];
-const EMPLOYEE_HEADERS = ['Employee ID', 'Full Name', 'Department', 'Type', 'Status', 'Date', 'Time'];
+const HEADERS = ['ID', 'ID Number', 'Full Name', 'Contact Number', 'Contact Person', 'Purpose', 'Status', 'Date', 'Time', 'Checkout Time'];
+const EMPLOYEE_HEADERS = ['ID', 'Employee ID', 'Full Name', 'Department', 'Type', 'Status', 'Date', 'Time'];
 
 // ─── SHEET HELPERS ────────────────────────────
 function getSheet() {
@@ -52,7 +52,7 @@ function getAllRows() {
       : (timeVal || '');
     
     rows.push({
-      id: data[i][0], // placeholder generic ID column (unused)
+      id: data[i][0], // GAS-generated placeholder ID
       idNumber: data[i][1],
       fullName: data[i][2],
       contactNumber: data[i][3],
