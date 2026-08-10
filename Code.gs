@@ -3,14 +3,14 @@
    Backend API using Google Sheets as database
    ============================================ */
 
-// ─── CONFIGURATION ────────────────────────────
+// ─── CONFIGURATION ────────────────────
 const SHEET_NAME = 'Visitors';
 const EMPLOYEE_SHEET_NAME = 'Employees';
 const ADMIN_PIN = '1234';
 const HEADERS = ['ID', 'ID Number', 'Full Name', 'Contact Number', 'Contact Person', 'Purpose', 'Status', 'Date', 'Time', 'Checkout Time'];
 const EMPLOYEE_HEADERS = ['ID', 'Employee ID', 'Full Name', 'Department', 'Type', 'Status', 'Date', 'Time'];
 
-// ─── SHEET HELPERS ────────────────────────────
+// ─── SHEET HELPERS ────────────────────
 function getSheet() {
   return ensureSheet(SHEET_NAME, HEADERS);
 }
@@ -19,7 +19,6 @@ function getEmployeeSheet() {
   return ensureSheet(EMPLOYEE_SHEET_NAME, EMPLOYEE_HEADERS);
 }
 
-// Creates (if missing) and styles a sheet tab with the given headers.
 function ensureSheet(name, headerRow) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(name);
@@ -35,34 +34,55 @@ function ensureSheet(name, headerRow) {
   return sheet;
 }
 
+// ─── GET ALL ROWS ─────────────────────
 function getAllRows() {
   const sheet = getSheet();
   const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return []; // Only header row
+  if (data.length <= 1) return [];
+  
   const rows = [];
   for (let i = 1; i < data.length; i++) {
-    // Convert Date objects to formatted strings for consistent handling
-    const dateVal = data[i][7];
-    const timeVal = data[i][8];
-    const dateStr = dateVal instanceof Date 
-      ? Utilities.formatDate(dateVal, 'Asia/Manila', 'dd/MM/yyyy')
-      : (dateVal || '');
-    const timeStr = timeVal instanceof Date
-      ? Utilities.formatDate(timeVal, 'Asia/Manila', 'hh:mm aa')
-      : (timeVal || '');
+    // DEBUG: Log the raw data types
+    Logger.log('Row ' + i + ':');
+    Logger.log('  Date (index 7): ' + data[i][7] + ' (type: ' + typeof data[i][7] + ')');
+    Logger.log('  Time (index 8): ' + data[i][8] + ' (type: ' + typeof data[i][8] + ')');
+    
+    // Convert Date objects to strings
+    let dateStr = '';
+    let timeStr = '';
+    
+    if (data[i][7] instanceof Date) {
+      // Format date as dd/MM/yyyy
+      dateStr = Utilities.formatDate(data[i][7], 'Asia/Manila', 'dd/MM/yyyy');
+    } else if (data[i][7] && String(data[i][7]).trim() !== '') {
+      // Already a string, use as-is
+      dateStr = String(data[i][7]).trim();
+    }
+    
+    if (data[i][8] instanceof Date) {
+      // Format time as hh:mm aa
+      timeStr = Utilities.formatDate(data[i][8], 'Asia/Manila', 'hh:mm aa');
+    } else if (data[i][8] && String(data[i][8]).trim() !== '') {
+      // Already a string, use as-is
+      timeStr = String(data[i][8]).trim();
+    }
+    
+    // DEBUG: Log the formatted strings
+    Logger.log('  Formatted Date: ' + dateStr);
+    Logger.log('  Formatted Time: ' + timeStr);
     
     rows.push({
-      id: data[i][0], // GAS-generated placeholder ID
-      idNumber: data[i][1],
-      fullName: data[i][2],
-      contactNumber: data[i][3],
-      contactPerson: data[i][4],
-      purpose: data[i][5],
-      status: data[i][6],
+      id: String(data[i][0] || ''),
+      idNumber: String(data[i][1] || ''),
+      fullName: String(data[i][2] || ''),
+      contactNumber: String(data[i][3] || ''),
+      contactPerson: String(data[i][4] || ''),
+      purpose: String(data[i][5] || ''),
+      status: String(data[i][6] || ''),
       date: dateStr,
       time: timeStr,
-      checkoutTime: data[i][8] || null,
-      timestamp: (dateVal && timeVal) ? new Date(dateStr + ' ' + timeStr) : null
+      checkoutTime: String(data[i][9] || ''),
+      timestamp: dateStr && timeStr ? dateStr + ' ' + timeStr : null
     });
   }
   return rows;
@@ -72,137 +92,98 @@ function getAllEmployeeRows() {
   const sheet = getEmployeeSheet();
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return [];
+  
   const rows = [];
   for (let i = 1; i < data.length; i++) {
-    // Convert Date objects to formatted strings for consistent handling
-    const dateVal = data[i][6];
-    const timeVal = data[i][7];
-    const dateStr = dateVal instanceof Date
-      ? Utilities.formatDate(dateVal, 'Asia/Manila', 'dd/MM/yyyy')
-      : (dateVal || '');
-    const timeStr = timeVal instanceof Date
-      ? Utilities.formatDate(timeVal, 'Asia/Manila', 'hh:mm aa')
-      : (timeVal || '');
-
+    // Convert Date objects to strings
+    let dateStr = '';
+    let timeStr = '';
+    
+    if (data[i][6] instanceof Date) {
+      dateStr = Utilities.formatDate(data[i][6], 'Asia/Manila', 'dd/MM/yyyy');
+    } else if (data[i][6] && String(data[i][6]).trim() !== '') {
+      dateStr = String(data[i][6]).trim();
+    }
+    
+    if (data[i][7] instanceof Date) {
+      timeStr = Utilities.formatDate(data[i][7], 'Asia/Manila', 'hh:mm aa');
+    } else if (data[i][7] && String(data[i][7]).trim() !== '') {
+      timeStr = String(data[i][7]).trim();
+    }
+    
     rows.push({
-      id: data[i][0], // placeholder generic ID column (unused)
-      employeeId: data[i][1],
-      fullName: data[i][2],
-      department: data[i][3],
-      type: data[i][4],
-      status: data[i][5],
+      id: String(data[i][0] || ''),
+      employeeId: String(data[i][1] || ''),
+      fullName: String(data[i][2] || ''),
+      department: String(data[i][3] || ''),
+      type: String(data[i][4] || ''),
+      status: String(data[i][5] || ''),
       date: dateStr,
       time: timeStr,
-      timestamp: (dateVal && timeVal) ? new Date(dateStr + ' ' + timeStr) : null
+      timestamp: dateStr && timeStr ? dateStr + ' ' + timeStr : null
     });
   }
   return rows;
 }
 
-function findRowById(sheet, id) {
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    // Match either generic ID (col 0) or primary identifier (col 1)
-    if (data[i][0] === id || data[i][1] === id) return i + 1; // 1-indexed for sheet
-  }
-  return -1;
+// ─── UTILITY FUNCTIONS ────────────────
+function getResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    data: data
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
-function cleanLegacyRows() {
-  // Clean Visitor sheet
-  const visitorSheet = getSheet();
-  const visitorData = visitorSheet.getDataRange().getValues();
-  for (let i = visitorData.length; i > 1; i--) {
-    const genericId = visitorData[i - 1][0];
-    if (genericId && genericId.toString().trim() !== '') {
-      visitorSheet.deleteRow(i);
-    }
-  }
-  // Clean Employee sheet
-  const employeeSheet = getEmployeeSheet();
-  const employeeData = employeeSheet.getDataRange().getValues();
-  for (let i = employeeData.length; i > 1; i--) {
-    const genericId = employeeData[i - 1][0];
-    if (genericId && genericId.toString().trim() !== '') {
-      employeeSheet.deleteRow(i);
-    }
-  }
+function getError(message, code) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'error',
+    message: message
+  })).setStatus(code || 500).setMimeType(ContentService.MimeType.JSON);
 }
 
-// ─── HELPERS ──────────────────────────────────
 function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  return 'ms' + Utilities.getUuid().substring(0, 8);
 }
 
 function generateIdNumber() {
   const now = new Date();
-  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  const randPart = Math.floor(1000 + Math.random() * 9000);
-  return `VIS-${datePart}-${randPart}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const random = Math.floor(Math.random() * 9000) + 1000;
+  return `VIS-${year}${month}${day}-${random}`;
 }
 
-function generateEmpIdNumber() {
+function generateEmployeeId() {
   const now = new Date();
-  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  const randPart = Math.floor(1000 + Math.random() * 9000);
-  return `EMP-${datePart}-${randPart}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const random = Math.floor(Math.random() * 9000) + 1000;
+  return `EMP-${year}${month}${day}-${random}`;
 }
 
-function getResponse(data, status = 'success') {
-  return ContentService
-    .createTextOutput(JSON.stringify({ status, data }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function getError(message, code = 400) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: 'error', message, code }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function parseBody(e) {
-  try {
-    return JSON.parse(e.postData.contents);
-  } catch {
-    return {};
-  }
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// ─── CORS HANDLER ─────────────────────────────
-function doOptions(e) {
-  return getResponse({}, 'ok');
-}
-
-// ─── GET: /api/visitors ──────────────────────
-// Query params:
-//   ?search=keyword  - search across all text fields
-//   ?filter=checked-in | checked-out  - filter by status
+// ─── GET: Endpoint Router ─────────────
 function doGet(e) {
   try {
     const params = e.parameter || {};
     const action = (params.action || '').toLowerCase().trim();
+    
+    // Clean legacy rows if requested
     if (action === 'cleanLegacy') {
       cleanLegacyRows();
       return getResponse({ cleaned: true });
     }
-  } catch (e) { /* ignore if not called with action */ }
-
-  try {
-    const params = e.parameter || {};
-    const action = (params.action || '').toLowerCase().trim();
+    
+    // Get search and filter parameters
     const search = (params.search || '').toLowerCase().trim();
     const filter = (params.filter || '').toLowerCase().trim();
-
+    
     // ── Employees endpoint ─────────────────
     if (action === 'employees') {
       let employees = getAllEmployeeRows();
+      
+      // Apply search
       if (search) {
         employees = employees.filter(emp =>
           (emp.fullName || '').toLowerCase().includes(search) ||
@@ -210,25 +191,27 @@ function doGet(e) {
           (emp.employeeId || '').toLowerCase().includes(search)
         );
       }
-      // 'today' filter is also applied client-side, but support it here too.
+      
+      // Apply filter
       if (filter === 'today') {
         const now = new Date();
         const todayStr = Utilities.formatDate(now, 'Asia/Manila', 'dd/MM/yyyy');
         employees = employees.filter(emp => emp.date === todayStr);
       }
+      
       return getResponse(employees);
     }
-
+    
     // ── Visitors endpoint (default) ────────
     let visitors = getAllRows();
-
+    
     // Apply filter
     if (filter === 'checked-in') {
       visitors = visitors.filter(v => v.status === 'checked-in');
     } else if (filter === 'checked-out') {
       visitors = visitors.filter(v => v.status === 'checked-out');
     }
-
+    
     // Apply search
     if (search) {
       visitors = visitors.filter(v =>
@@ -239,158 +222,202 @@ function doGet(e) {
         (v.idNumber || '').toLowerCase().includes(search)
       );
     }
-
+    
     return getResponse(visitors);
+    
   } catch (err) {
+    Logger.log('doGet error: ' + err.toString());
     return getError(err.toString(), 500);
   }
 }
 
-// ─── POST: Endpoint Router ────────────────────
+// ─── POST: Endpoint Router ─────────────
 function doPost(e) {
   try {
-    const body = parseBody(e);
-    const action = body.action || '';
-
-    switch (action) {
-
-      // ── Create Check-in ────────────────────
-      case 'checkin': {
-        const sheet = getSheet();
-        const { fullName, contactNumber, contactPerson, purpose } = body;
-
-        if (!fullName || !contactNumber || !contactPerson || !purpose) {
-          return getError('All fields are required.');
-        }
-
-        const id = generateId();
-        const idNumber = generateIdNumber();
-        const now = new Date();
-        const dateStr = Utilities.formatDate(now, 'Asia/Manila', 'dd/MM/yyyy');
-        const timeStr = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
-
-        sheet.appendRow([
-          '', // placeholder for generic ID column
-          idNumber,
-          fullName.trim(),
-          contactNumber.trim(),
-          contactPerson,
-          purpose,
-          'checked-in',
-          dateStr,
-          timeStr,
-          ''
-        ]);
-
-        return getResponse({
-          id: idNumber,
-          idNumber,
-          fullName: fullName.trim(),
-          contactNumber: contactNumber.trim(),
-          contactPerson,
-          purpose,
-          status: 'checked-in',
-          date: dateStr,
-          time: timeStr
-        });
+    const params = e.parameter || {};
+    const action = (params.action || '').toLowerCase().trim();
+    
+    // ── Admin login ─────────────────────────
+    if (action === 'login') {
+      const pin = (params.pin || '').trim();
+      if (pin === ADMIN_PIN) {
+        return getResponse({ authenticated: true });
       }
-
-      // ── Check Out ───────────────────────────
-      case 'checkout': {
-        const { id: checkoutId } = body;
-        if (!checkoutId) return getError('Visitor ID is required.');
-
-        const sheet = getSheet();
-        const row = findRowById(sheet, checkoutId);
-        if (row === -1) return getError('Visitor not found.', 404);
-
-        // Update status (col 7) and checkout time (col 10)
-        const checkoutNow = new Date();
-        const checkoutTimeStr = Utilities.formatDate(checkoutNow, 'Asia/Manila', 'hh:mm aa');
-        const checkoutDateStr = Utilities.formatDate(checkoutNow, 'Asia/Manila', 'dd/MM/yyyy');
-sheet.getRange(row, 7).setValue('checked-out'); // status column restored
-         sheet.getRange(row, 10).setValue(checkoutDateStr + ' ' + checkoutTimeStr);
-
-        return getResponse({ id: checkoutId, status: 'checked-out' });
-      }
-
-      // ── Delete ──────────────────────────────
-      case 'delete': {
-        const { id: deleteId } = body;
-        if (!deleteId) return getError('Visitor ID is required.');
-
-        const sheet = getSheet();
-        const row = findRowById(sheet, deleteId);
-        if (row === -1) return getError('Visitor not found.', 404);
-
-        sheet.deleteRow(row);
-        return getResponse({ id: deleteId, deleted: true });
-      }
-
-      // ── Employee Time-in ────────────────────
-      case 'empCheckin': {
-        const { fullName, department } = body;
-
-        if (!fullName || !department) {
-          return getError('Employee full name and department are required.');
-        }
-
-        const sheet = getEmployeeSheet();
-        const id = generateId();
-        const employeeId = generateEmpIdNumber();
-        const now = new Date();
-        const dateStr = Utilities.formatDate(now, 'Asia/Manila', 'dd/MM/yyyy');
-        const timeStr = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
-
-        sheet.appendRow([
-          '', // placeholder for generic ID column
-          employeeId,
-          fullName.trim(),
-          department,
-          'Employee',
-          'Time-in',
-          dateStr,
-          timeStr
-        ]);
-
-        return getResponse({
-          id: employeeId,
-          employeeId,
-          fullName: fullName.trim(),
-          department,
-          type: 'Employee',
-          status: 'Time-in',
-          date: dateStr,
-          time: timeStr
-        });
-      }
-
-      // ── Delete Employee Log ────────────────
-      case 'empDelete': {
-        const { id: deleteId } = body;
-        if (!deleteId) return getError('Employee log ID is required.');
-
-        const sheet = getEmployeeSheet();
-        const row = findRowById(sheet, deleteId);
-        if (row === -1) return getError('Employee log not found.', 404);
-
-        sheet.deleteRow(row);
-        return getResponse({ id: deleteId, deleted: true });
-      }
-
-      // ── Auth ────────────────────────────────
-      case 'auth': {
-        const { pin } = body;
-        if (pin === ADMIN_PIN) {
-          return getResponse({ authenticated: true, token: 'admin-authenticated' });
-        }
-        return getResponse({ authenticated: false });
-      }
-
-      default:
-        return getError('Unknown action: "' + action + '". Valid actions: checkin, checkout, delete, empCheckin, empDelete, auth');
+      return getError('Invalid PIN', 401);
     }
+    
+    // ── Check-out visitor ───────────────────
+    if (action === 'checkout') {
+      const idNumber = params.idNumber;
+      if (!idNumber) return getError('Missing idNumber', 400);
+      
+      const sheet = getSheet();
+      const data = sheet.getDataRange().getValues();
+      
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][1]) === String(idNumber)) {
+          const now = new Date();
+          const checkoutTime = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
+          sheet.getRange(i + 1, 10).setValue(checkoutTime);
+          sheet.getRange(i + 1, 7).setValue('checked-out');
+          return getResponse({ success: true, checkoutTime: checkoutTime });
+        }
+      }
+      return getError('Visitor not found', 404);
+    }
+    
+    // ── Delete visitor ──────────────────────
+    if (action === 'deleteVisitor') {
+      const idNumber = params.idNumber;
+      if (!idNumber) return getError('Missing idNumber', 400);
+      
+      const sheet = getSheet();
+      const data = sheet.getDataRange().getValues();
+      
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][1]) === String(idNumber)) {
+          sheet.deleteRow(i + 1);
+          return getResponse({ success: true });
+        }
+      }
+      return getError('Visitor not found', 404);
+    }
+    
+    // ── Delete employee ─────────────────────
+    if (action === 'deleteEmployee') {
+      const employeeId = params.employeeId;
+      if (!employeeId) return getError('Missing employeeId', 400);
+      
+      const sheet = getEmployeeSheet();
+      const data = sheet.getDataRange().getValues();
+      
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][1]) === String(employeeId)) {
+          sheet.deleteRow(i + 1);
+          return getResponse({ success: true });
+        }
+      }
+      return getError('Employee not found', 404);
+    }
+    
+    // ── Add visitor (manual override) ───────
+    if (action === 'addVisitor') {
+      const idNumber = params.idNumber;
+      const fullName = params.fullName;
+      const contactNumber = params.contactNumber;
+      const contactPerson = params.contactPerson;
+      const purpose = params.purpose;
+      
+      if (!idNumber || !fullName) {
+        return getError('Missing required fields', 400);
+      }
+      
+      const sheet = getSheet();
+      const now = new Date();
+      const dateStr = Utilities.formatDate(now, 'Asia/Manila', 'dd/MM/yyyy');
+      const timeStr = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
+      
+      sheet.appendRow([
+        generateId(),
+        idNumber,
+        fullName,
+        contactNumber || '',
+        contactPerson || '',
+        purpose || '',
+        'checked-in',
+        dateStr,
+        timeStr,
+        ''
+      ]);
+      
+      return getResponse({ success: true });
+    }
+    
+    // ── Add employee (manual override) ──────
+    if (action === 'addEmployee') {
+      const employeeId = params.employeeId;
+      const fullName = params.fullName;
+      const department = params.department;
+      
+      if (!employeeId || !fullName) {
+        return getError('Missing required fields', 400);
+      }
+      
+      const sheet = getEmployeeSheet();
+      const now = new Date();
+      const dateStr = Utilities.formatDate(now, 'Asia/Manila', 'dd/MM/yyyy');
+      const timeStr = Utilities.formatDate(now, 'Asia/Manila', 'hh:mm aa');
+      
+      sheet.appendRow([
+        generateId(),
+        employeeId,
+        fullName,
+        department || '',
+        'Employee',
+        'Time-in',
+        dateStr,
+        timeStr
+      ]);
+      
+      return getResponse({ success: true });
+    }
+    
+    return getError('Unknown action: ' + action, 400);
+    
   } catch (err) {
+    Logger.log('doPost error: ' + err.toString());
     return getError(err.toString(), 500);
   }
+}
+
+// ─── CLEANUP: Remove legacy rows ──────────
+function cleanLegacyRows() {
+  const sheet = getSheet();
+  const data = sheet.getDataRange().getValues();
+  let deleted = 0;
+  
+  for (let i = data.length - 1; i >= 1; i--) {
+    const id = String(data[i][0] || '');
+    // Delete rows that don't have the new format ID (ms...)
+    if (!id.startsWith('ms')) {
+      sheet.deleteRow(i + 1);
+      deleted++;
+    }
+  }
+  
+  return deleted;
+}
+
+// ─── TEST: Debug function ────────────────
+function testDateFormatting() {
+  const sheet = getSheet();
+  const data = sheet.getDataRange().getValues();
+  
+  Logger.log('=== Testing Date Formatting ===');
+  Logger.log('Total rows: ' + (data.length - 1));
+  
+  for (let i = 1; i < Math.min(data.length, 6); i++) {
+    const dateVal = data[i][7];
+    const timeVal = data[i][8];
+    
+    Logger.log('\nRow ' + i + ':');
+    Logger.log('  Raw Date: ' + dateVal + ' (type: ' + typeof dateVal + ')');
+    Logger.log('  Raw Time: ' + timeVal + ' (type: ' + typeof timeVal + ')');
+    
+    if (dateVal instanceof Date) {
+      const dateStr = Utilities.formatDate(dateVal, 'Asia/Manila', 'dd/MM/yyyy');
+      Logger.log('  Formatted Date: ' + dateStr);
+    } else {
+      Logger.log('  Date is already a string: ' + dateVal);
+    }
+    
+    if (timeVal instanceof Date) {
+      const timeStr = Utilities.formatDate(timeVal, 'Asia/Manila', 'hh:mm aa');
+      Logger.log('  Formatted Time: ' + timeStr);
+    } else {
+      Logger.log('  Time is already a string: ' + timeVal);
+    }
+  }
+  
+  return 'Check Logger for results';
 }
