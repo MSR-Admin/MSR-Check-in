@@ -1,0 +1,17 @@
+{
+  "kind": "agnes_image",
+  "mode": "text_to_image",
+  "model": "agnes-image-2.1-flash",
+  "original_prompt": "Create a visual guide showing how to publish a Google Apps Script web app",
+  "enhanced_prompt": "A detailed step-by-step guide showing how to publish a Google Apps Script web app. The diagram should include: opening Apps Script editor, going to Deploy > New deployment, selecting Web app type, setting access permissions to 'Anyone', clicking Deploy, copying the web app URL, and redeploying to fix bugs. Modern, clean technical tutorial style with numbered steps.",
+  "size": "1K",
+  "remote_url": "https://platform-outputs.agnes-ai.space/images/t2i/9675ba8a6a4d40708f4d0d1998a49b73.png",
+  "local_path": "/Users/ritchegerona/Development/MSR Check-in/.agnes/artifacts/images/agnes-image-20260810-062832-019fea5bcceb79628df9e5fa1f3833fc.png",
+  "metadata_path": "/Users/ritchegerona/Development/MSR Check-in/.agnes/artifacts/images/agnes-image-20260810-062832-019fea5bcceb79628df9e5fa1f3833fc.json",
+  "mime_type": "image/png",
+  "width": 1024,
+  "height": 1024,
+  "bytes": 1176423,
+  "preview": null,
+  "created_at": "2026-08-10T06:28:32.619835+00:00"
+}

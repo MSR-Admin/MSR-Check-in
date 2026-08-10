@@ -1,0 +1,20 @@
+{
+  "kind": "webpage_snapshot",
+  "url": "https://script.google.com/macros/s/AKfycbznvRVVrBk3cUdgub4WhW1oBsKX3ZisjxxPxqMVPB6mwtrqagn4y8I4sMzQAbApV6jPHA/exec",
+  "final_url": "https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnROSKN1xi41dSfeAzVX6dxlW3vSJJWBrhgeH4TSygXQ3rkM_LghCGzupphrWazNwmzRBwohP0FE1cuEaEzPBLkcd3fHnYzDegthtTk7NhPC7-kDa7Y0NUkKfaX3IqTPiAcYngSf9MayMMVjF_Px6AlbrXpTvJGY4tuU-wnIxsLWVTE1UChbK2YZl89EhIhjgE2nQ8fF9jKXD921P8Xfg98zu60Z2MivzdUfug9wUaCmWdrfndckJcHlN8DpEffPxxGE4VOz6uK4CwENMp_wYSOIYCrzdw&lib=MHcfegIH4Zo0RHte_4KA4tXMvNJHt_SLQ",
+  "status": 200,
+  "read_status": "non_html",
+  "content_type": "application/json; charset=utf-8",
+  "fetched_at": "2026-08-10T06:29:10.084648+00:00",
+  "title": "Untitled webpage",
+  "description": "",
+  "site_name": null,
+  "published_at": null,
+  "source_type": "unknown",
+  "text": "",
+  "quote_candidates": [],
+  "word_count": 0,
+  "truncated": false,
+  "blocked": false,
+  "source": "direct_http"
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "agnes_image",
+  "mode": "text_to_image",
+  "model": "agnes-image-2.1-flash",
+  "original_prompt": "Create a visual cheat sheet for Google Apps Script deployment and troubleshooting",
+  "enhanced_prompt": "A comprehensive cheat sheet showing how to use Google Apps Script Web App publishing features. The image should include: how to redeploy with version history, how to check execution logs (View > Logs), how to test web app URLs, and common troubleshooting steps. Modern, clean technical reference style with icons and clear typography.",
+  "size": "1K",
+  "remote_url": "https://platform-outputs.agnes-ai.space/images/t2i/c471f720b6a04b1d86bee72d7ba4dc34.png",
+  "local_path": "/Users/ritchegerona/Development/MSR Check-in/.agnes/artifacts/images/agnes-image-20260810-062830-019fea5bc6247b72af828520344337f0.png",
+  "metadata_path": "/Users/ritchegerona/Development/MSR Check-in/.agnes/artifacts/images/agnes-image-20260810-062830-019fea5bc6247b72af828520344337f0.json",
+  "mime_type": "image/png",
+  "width": 1024,
+  "height": 1024,
+  "bytes": 1213516,
+  "preview": null,
+  "created_at": "2026-08-10T06:28:30.884052+00:00"
+}
