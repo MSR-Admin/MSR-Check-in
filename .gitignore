@@ -5,6 +5,8 @@
 .agnes/
 .kilo/
 .openclaude/
+.qwen/
+.remember/
 
 # Dependencies
 node_modules/
