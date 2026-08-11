@@ -357,6 +357,7 @@
 
   // ─── Show Toast Notification ────────────
   function showToast(){ /* toast disabled for visitor/employee */ }
+// toast intentionally disabled on GitHub Pages
 
   // ─── API Call: Check-in ───────────────────
   async function submitCheckin(visitorData) {

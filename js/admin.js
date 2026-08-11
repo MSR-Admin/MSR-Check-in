@@ -358,26 +358,7 @@ let toastTimer = null;
   }, 15000);
 
   // ─── Toast Notification ─────────────────
-  function showToast(message, type) {
-    // Suppress specific persistent error toast that may linger from previous page loads
-    if (message && message.includes('Failed to load dashboard')) {
-      return;
-    }
-    const isError = type === 'error';
-    const icon = isError ? '❌' : '✅';
-    const outcomeLabel = isError ? 'Failed:' : 'Success:';
-    // Build toast content with close button (static until dismissed)
-    toast.innerHTML = `${icon}<span class="toast-label">${outcomeLabel}</span> ${message}<span class="close-btn">×</span>`;
-    toast.className = 'toast ' + (type || '');
-    // Force reflow and show
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    // Attach close handler (remove toast on click)
-    const closeBtn = toast.querySelector('.close-btn');
-    if (closeBtn) {
-      closeBtn.onclick = () => toast.classList.remove('show');
-    }
-  }
+  function showToast(){ /* toast disabled for admin */ }
 
   // ─── API Helpers ──────────────────────────
   // ---------- Mock data (in‑memory) ----------
