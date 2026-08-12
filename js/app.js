@@ -8,7 +8,7 @@
   'use strict';
 
   // ─── Configuration ──────────────────────────
-  const API_URL = 'https://script.google.com/macros/s/AKfycbznvRVVrBk3cUdgub4WhW1oBsKX3ZisjxxPxqMVPB6mwtrqagn4y8I4sMzQAbApV6jPHA/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwulWJtZij8BYIu9zSIgPqL6e1FrJftbij4R7Poy3MQxq2XGsbq9EETBeonVfb33TXq/exec';
   const LANG_KEY = 'msr_language';
 
   // ─── DOM References ────────────────────
