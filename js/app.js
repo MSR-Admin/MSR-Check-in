@@ -204,7 +204,7 @@
   const DEPARTMENTS = [
     { name: 'GCC Team', persons: ['Ron Adan', 'Majeed Ali Alshawi', 'Sofia Apostol', 'Jane Bergado', 'Mia Bullungan', 'Tin Bustarga', 'Pauline Cruz', 'Aladin Dimakaling', 'Marlou Dimanarig', 'Paul Egualan', 'Patricia Ensomo', 'Theo Floresca', 'Rodel Llacuna, Jr.', 'Catherine Lopez'] },
     { name: 'Western Team', persons: ['Jay Aggarao', 'Eshaq Al-Mstaka', 'Racquel Bosano', 'Christian Cabanes', 'Monica Cabrera', 'Ashley Calvo', 'Ailyn Dela Cruz', 'CJ Diaz', 'Narciso Donayre', 'Angelica Lacuna', 'Ruth Martos', 'Aleeyah Padilla', 'Jerish Rodriguez-Mallare', 'Anna Victoriano', 'Ernie Vida'] },
-    { name: 'Documentation and Deployment', persons: ['Jenny Ayos', 'Madz Batasin', 'Neilster Carpio', 'Patrick De Leon', 'Ren Esguerra, Jr.', 'Ritche Gerona', 'Ivy Peñascosas', 'Zsa Zsa Villadorez'] },
+    { name: 'Documentation and Deployment', persons: ['Jenny Ayos', 'Madz Batasin', 'Neilster Carpio', 'Patrick De Leon', 'Ren Esguerra, Jr.', 'Ritche Gerona', 'Ivy Peñascosas', 'Zsa Zsa Villadarez'] },
     { name: 'Accounting', persons: ['Wilma Bartolome', 'Angeline Casinsin', 'Ella Celestino'] },
     { name: 'HR', persons: ['Russell Caballero', 'Anna Pili'] },
     { name: 'Digital Marketing', persons: ['Angelica Necor'] },
