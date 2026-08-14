@@ -187,6 +187,17 @@ body.admin-page::before {
 }
 
 /* ─── Section Title ─────────────────────── */
+/* Team dropdown styling */
+optgroup {font-weight:bold; text-transform:uppercase;}
+.team-gcc {color:#1E90FF !important; font-weight:bold !important;}
+.team-western {color:#FF8C00 !important; font-weight:bold !important;}
+.team-doc {color:#32CD32 !important; font-weight:bold !important;}
+.team-accounting {color:#8A2BE2 !important; font-weight:bold !important;}
+.team-hr {color:#FF1493 !important; font-weight:bold !important;}
+.team-digital {color:#20B2AA !important; font-weight:bold !important;}
+.team-business {color:#DAA520 !important; font-weight:bold !important;}
+.team-president {color:#FF4500 !important; font-weight:bold !important;}
+
 .section-title {
   font-size: 16px;
   font-weight: 700;
